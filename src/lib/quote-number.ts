@@ -1,0 +1,1 @@
+export function normalizeQuoteNumber(value:unknown):string{const raw=String(value??"").trim();if(!raw)return "";if(/^\d+\.0+$/.test(raw))return raw.replace(/\.0+$/,"");return raw.replace(/\s+/g,"").toUpperCase()}

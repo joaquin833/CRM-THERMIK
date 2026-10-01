@@ -1,0 +1,4 @@
+import {createHmac,timingSafeEqual} from 'node:crypto';
+function secret(){return process.env.APP_ENCRYPTION_KEY||process.env.CRON_SECRET||''}
+export function createOAuthState(userId:string){if(secret().length<32)throw new Error('APP_ENCRYPTION_KEY debe tener al menos 32 caracteres');const payload=Buffer.from(JSON.stringify({userId,nonce:crypto.randomUUID(),exp:Date.now()+10*60_000})).toString('base64url');const sig=createHmac('sha256',secret()).update(payload).digest('base64url');return `${payload}.${sig}`}
+export function verifyOAuthState(value:string){const [payload,sig]=value.split('.');if(!payload||!sig)return null;const expected=createHmac('sha256',secret()).update(payload).digest();const actual=Buffer.from(sig,'base64url');if(actual.length!==expected.length||!timingSafeEqual(actual,expected))return null;const parsed=JSON.parse(Buffer.from(payload,'base64url').toString()) as {userId:string;exp:number};return parsed.exp>Date.now()?parsed:null}

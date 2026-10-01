@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {z} from 'zod';import {requireProfile} from '@/lib/auth/authorization';import {createClient} from '@/lib/supabase/server';
+export async function POST(req:Request){try{await requireProfile(['admin']);const {batchId}=z.object({batchId:z.string().uuid()}).parse(await req.json());const s=await createClient();const {data,error}=await s.rpc('revert_import_batch',{p_batch_id:batchId});if(error)throw error;return NextResponse.json(data)}catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Error'},{status:400})}}

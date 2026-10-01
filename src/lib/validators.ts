@@ -1,0 +1,2 @@
+import {z} from "zod";import {normalizeQuoteNumber} from "./quote-number";
+export const quoteSchema=z.object({organization_id:z.string().uuid(),numero_cotizacion:z.string().min(1).transform(normalizeQuoteNumber),oportunidad_id:z.string().uuid(),contacto_id:z.string().uuid(),fecha_emision:z.string().date(),fecha_validez:z.string().date().optional(),estado:z.string().min(1),total:z.coerce.number().int().nonnegative(),ejecutivo_responsable_id:z.string().uuid()});

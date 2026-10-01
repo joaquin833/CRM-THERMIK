@@ -1,0 +1,1 @@
+export function addBusinessDays(input: Date, days: number) { const d=new Date(input); let remaining=days; while(remaining>0){ d.setDate(d.getDate()+1); const day=d.getDay(); if(day!==0&&day!==6) remaining--; } return d; }

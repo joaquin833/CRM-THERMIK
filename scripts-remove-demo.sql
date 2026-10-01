@@ -1,0 +1,10 @@
+begin;
+delete from tasks where origen_registro='demo';
+delete from activities where origen_registro='demo';
+delete from state_history where origen_registro='demo';
+delete from cotizaciones where origen_registro='demo' and numero_cotizacion_normalizado='14394';
+delete from oportunidades where nombre='Aislación vivienda demostración' and not exists(select 1 from cotizaciones where oportunidad_id=oportunidades.id);
+delete from proyectos where nombre='Proyecto demostración' and not exists(select 1 from oportunidades where proyecto_id=proyectos.id);
+delete from contactos where correo='demo@example.invalid' and not exists(select 1 from cotizaciones where contacto_id=contactos.id);
+delete from empresas where nombre_fantasia='Cliente demostración' and not exists(select 1 from contactos where empresa_id=empresas.id);
+commit;

@@ -1,0 +1,7 @@
+# Pendientes externos
+- Credenciales reales de Supabase
+- Credenciales OAuth de Google
+- API key de Anthropic
+- Dominio y despliegue en Vercel
+- Logo oficial
+- Archivo histórico real

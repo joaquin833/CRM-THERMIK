@@ -1,0 +1,1 @@
+export function normalizeRut(v:string){return v.replace(/\./g,"").replace(/\s/g,"").toUpperCase()}export function validRut(v:string){const r=normalizeRut(v);const m=r.match(/^(\d+)-([0-9K])$/);if(!m)return false;let s=0,n=2;for(const d of m[1].split("").reverse()){s+=Number(d)*n;n=n===7?2:n+1}const x=11-(s%11);const dv=x===11?"0":x===10?"K":String(x);return dv===m[2]}

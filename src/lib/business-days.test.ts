@@ -1,0 +1,1 @@
+import {describe,it,expect} from 'vitest';import {addBusinessDays} from './business-days';describe('días hábiles',()=>{it('salta fin de semana',()=>expect(addBusinessDays(new Date('2026-10-02T12:00:00Z'),2).toISOString().slice(0,10)).toBe('2026-10-06'))});
