@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useMemo,
-  useState,
-  type FormEvent,
-} from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type ActivityResult = {
@@ -49,90 +45,332 @@ export function QuoteFollowUpForm({
   activityResults,
 }: QuoteFollowUpFormProps) {
   const router = useRouter();
+  const [form, setForm] = useState<FormState>(initialState);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [form, setForm] =
-    useState<FormState>(initialState);
-
-  const [busy, setBusy] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  const [success, setSuccess] =
-    useState("");
-
-  const selectedResult = useMemo(() => {
-    return (
+  const selectedResult = useMemo(
+    () =>
       activityResults.find(
-        (result) =>
-          result.codigo === form.resultCode
-      ) ?? null
-    );
-  }, [activityResults, form.resultCode]);
+        (result) => result.codigo === form.resultCode
+      ) ?? null,
+    [activityResults, form.resultCode]
+  );
 
   const requiresComment =
-    selectedResult?.requiere_comentario ??
-    false;
-
+    selectedResult?.requiere_comentario ?? false;
   const requiresNextAction =
-    selectedResult?.requiere_proxima_accion ??
-    false;
-
-  const requiresDate =
-    selectedResult?.requiere_fecha ??
-    false;
-
+    selectedResult?.requiere_proxima_accion ?? false;
+  const requiresDate = selectedResult?.requiere_fecha ?? false;
   const closesOpportunity =
-    selectedResult?.cierra_oportunidad ??
-    false;
+    selectedResult?.cierra_oportunidad ?? false;
 
-  function updateF*eld(
-  field: keyof FormState,
-  v*lue: string
-) {
-  setForm((current* => {
-    switch (field) {
-      c*se "activityType":
-        return *
-          ...current,
-          a*tivityType: value,
-        };
+  function updateField(field: keyof FormState, value: string): void {
+    setForm((current) => {
+      switch (field) {
+        case "activityType":
+          return { ...current, activityType: value };
+        case "resultCode":
+          return { ...current, resultCode: value };
+        case "comment":
+          return { ...current, comment: value };
+        case "nextAction":
+          return { ...current, nextAction: value };
+        case "nextAt":
+          return { ...current, nextAt: value };
+        case "priority":
+          return { ...current, priority: value };
+        default:
+          return current;
+      }
+    });
 
-   *  case "resultCode":
-        retur* {
-          ...current,
-         *resultCode: value,
-        };
+    setError("");
+    setSuccess("");
+  }
 
-   *  case "comment":
-        return {*          ...current,
-          co*ment: value,
-        };
+  function clearForm(): void {
+    setForm(initialState);
+    setError("");
+    setSuccess("");
+  }
 
-      cas* "nextAction":
-        return {
-  *       ...current,
-          nextA*tion: value,
-        };
+  async function submitFollowUp(
+    event: FormEvent<HTMLFormElement>
+  ): Promise<void> {
+    event.preventDefault();
 
-      cas* "nextAt":
-        return {
-      *   ...current,
-          nextAt: value,
-        };
-
-      case "priority":
-        return {
-          ...current,
-          priority: value,
-        };
-
-      default:
-        return current;
+    if (!form.resultCode) {
+      setError("Selecciona el resultado del seguimiento.");
+      return;
     }
-  });
 
-  setError("");
-  setSuccess("");
+    if (requiresComment && !form.comment.trim()) {
+      setError("El resultado seleccionado requiere un comentario.");
+      return;
+    }
+
+    if (requiresNextAction && !form.nextAction.trim()) {
+      setError("El resultado seleccionado requiere una proxima accion.");
+      return;
+    }
+
+    if (requiresDate && !form.nextAt) {
+      setError(
+        "El resultado seleccionado requiere una fecha de seguimiento."
+      );
+      return;
+    }
+
+    if (form.nextAt) {
+      const selectedDate = new Date(form.nextAt);
+
+      if (Number.isNaN(selectedDate.getTime())) {
+        setError("La fecha del seguimiento no es valida.");
+        return;
+      }
+
+      if (selectedDate.getTime() <= Date.now()) {
+        setError("La fecha del proximo seguimiento debe ser futura.");
+        return;
+      }
+    }
+
+    try {
+      setBusy(true);
+      setError("");
+      setSuccess("");
+
+      const nextAt = form.nextAt
+        ? new Date(form.nextAt).toISOString()
+        : null;
+
+      const response = await fetch(
+        `/api/cotizaciones/${quoteId}/followup`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            activityType: form.activityType,
+            resultCode: form.resultCode,
+            comment: form.comment.trim() || null,
+            nextAction: form.nextAction.trim() || null,
+            nextAt,
+            priority: form.priority,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof result.error === "string"
+            ? result.error
+            : "No fue posible registrar el seguimiento."
+        );
+      }
+
+      setSuccess(
+        result.message ?? "Seguimiento registrado correctamente."
+      );
+      setForm(initialState);
+      router.refresh();
+    } catch (operationError) {
+      setError(
+        operationError instanceof Error
+          ? operationError.message
+          : "No fue posible registrar el seguimiento."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border bg-white p-5 shadow-sm">
+      <div>
+        <p className="text-sm font-medium uppercase tracking-wide text-emerald-700">
+          Gestion comercial
+        </p>
+        <h2 className="mt-1 text-xl font-semibold text-slate-900">
+          Registrar seguimiento
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Cotizacion N. {quoteNumber}. Registra el contacto realizado y
+          programa la proxima accion cuando corresponda.
+        </p>
+      </div>
+
+      <form onSubmit={submitFollowUp} className="mt-5 grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Canal de contacto
+            <select
+              value={form.activityType}
+              disabled={busy}
+              onChange={(event) =>
+                updateField("activityType", event.target.value)
+              }
+              className="rounded-lg border border-slate-300 bg-white p-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+            >
+              <option value="Llamada">Llamada</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Correo">Correo</option>
+              <option value="Reunion">Reunion</option>
+              <option value="Visita">Visita</option>
+              <option value="Nota">Nota interna</option>
+            </select>
+          </label>
+
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Resultado
+            <select
+              value={form.resultCode}
+              disabled={busy}
+              required
+              onChange={(event) =>
+                updateField("resultCode", event.target.value)
+              }
+              className="rounded-lg border border-slate-300 bg-white p-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+            >
+              <option value="">Selecciona un resultado</option>
+              {activityResults.map((result) => (
+                <option key={result.id} value={result.codigo}>
+                  {result.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {selectedResult && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="font-medium text-emerald-900">
+              Resultado seleccionado: {selectedResult.nombre}
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-emerald-800">
+              {requiresComment && <li>Requiere un comentario.</li>}
+              {requiresNextAction && <li>Requiere una proxima accion.</li>}
+              {requiresDate && <li>Requiere una fecha futura.</li>}
+              {closesOpportunity && (
+                <li>Este resultado puede cerrar o postergar la oportunidad.</li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        <label className="grid gap-1 text-sm font-medium text-slate-700">
+          <span>
+            Comentario
+            {requiresComment && <span className="ml-1 text-red-600">*</span>}
+          </span>
+          <textarea
+            value={form.comment}
+            disabled={busy}
+            required={requiresComment}
+            maxLength={5000}
+            onChange={(event) => updateField("comment", event.target.value)}
+            className="min-h-28 rounded-lg border border-slate-300 p-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+            placeholder="Ejemplo: El cliente esta evaluando la propuesta."
+          />
+          <span className="text-xs font-normal text-slate-500">
+            {form.comment.length}/5000 caracteres
+          </span>
+        </label>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            <span>
+              Proxima accion
+              {requiresNextAction && (
+                <span className="ml-1 text-red-600">*</span>
+              )}
+            </span>
+            <input
+              value={form.nextAction}
+              disabled={busy}
+              required={requiresNextAction}
+              maxLength={1000}
+              onChange={(event) =>
+                updateField("nextAction", event.target.value)
+              }
+              className="rounded-lg border border-slate-300 p-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+              placeholder="Ejemplo: Volver a llamar"
+            />
+          </label>
+
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            <span>
+              Fecha del proximo seguimiento
+              {requiresDate && <span className="ml-1 text-red-600">*</span>}
+            </span>
+            <input
+              type="datetime-local"
+              value={form.nextAt}
+              disabled={busy}
+              required={requiresDate}
+              onChange={(event) => updateField("nextAt", event.target.value)}
+              className="rounded-lg border border-slate-300 p-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+            />
+          </label>
+        </div>
+
+        <label className="grid gap-1 text-sm font-medium text-slate-700 md:max-w-xs">
+          Prioridad de la proxima tarea
+          <select
+            value={form.priority}
+            disabled={busy}
+            onChange={(event) => updateField("priority", event.target.value)}
+            className="rounded-lg border border-slate-300 bg-white p-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+          >
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </label>
+
+        {error && (
+          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4">
+            <p className="font-medium text-red-900">
+              No fue posible registrar el seguimiento
+            </p>
+            <p className="mt-1 text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div
+            aria-live="polite"
+            className="rounded-xl border border-emerald-300 bg-emerald-50 p-4"
+          >
+            <p className="font-medium text-emerald-900">{success}</p>
+            <p className="mt-1 text-sm text-emerald-800">
+              La ficha comercial y las tareas relacionadas fueron actualizadas.
+            </p>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-lg bg-brand px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? "Registrando..." : "Guardar seguimiento"}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={clearForm}
+            className="rounded-lg border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Limpiar
+          </button>
+        </div>
+      </form>
+    </section>
+  );
 }
