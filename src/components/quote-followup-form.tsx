@@ -53,18 +53,23 @@ export function QuoteFollowUpForm({
   const [form, setForm] =
     useState<FormState>(initialState);
 
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [busy, setBusy] =
+    useState(false);
 
-  const selectedResult = useMemo(
-    () =>
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
+
+  const selectedResult = useMemo(() => {
+    return (
       activityResults.find(
         (result) =>
           result.codigo === form.resultCode
-      ) ?? null,
-    [activityResults, form.resultCode]
-  );
+      ) ?? null
+    );
+  }, [activityResults, form.resultCode]);
 
   const requiresComment =
     selectedResult?.requiere_comentario ??
@@ -86,11 +91,36 @@ export function QuoteFollowUpForm({
     field: keyof FormState,
     value: string
   ) {
-    setForm((current) => ({
-      ...current,
-      [field\]: value,
-    }));
+    setForm((current) => {
+      return {
+        ...current,
+        [field\]: value,
+      };
+    });
 
     setError("");
     setSuccess("");
- 
+  }
+
+  function clearForm() {
+    setForm(initialState);
+    setError("");
+    setSuccess("");
+  }
+
+  async function submitFollowUp(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!form.resultCode) {
+      setError(
+        "Selecciona el resultado del seguimiento."
+      );
+
+      return;
+    }
+
+    if (
+      requiresComment &&
+      !form.
