@@ -87,40 +87,52 @@ export function QuoteFollowUpForm({
     selectedResult?.cierra_oportunidad ??
     false;
 
-  function updateField(
-    field: keyof FormState,
-    value: string
-  ) {
-    setForm((current) => {
-      return {
-        ...current,
-        [field\]: value,
-      };
-    });
+  function updateF*eld(
+  field: keyof FormState,
+  v*lue: string
+) {
+  setForm((current* => {
+    switch (field) {
+      c*se "activityType":
+        return *
+          ...current,
+          a*tivityType: value,
+        };
 
-    setError("");
-    setSuccess("");
-  }
+   *  case "resultCode":
+        retur* {
+          ...current,
+         *resultCode: value,
+        };
 
-  function clearForm() {
-    setForm(initialState);
-    setError("");
-    setSuccess("");
-  }
+   *  case "comment":
+        return {*          ...current,
+          co*ment: value,
+        };
 
-  async function submitFollowUp(
-    event: FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault();
+      cas* "nextAction":
+        return {
+  *       ...current,
+          nextA*tion: value,
+        };
 
-    if (!form.resultCode) {
-      setError(
-        "Selecciona el resultado del seguimiento."
-      );
+      cas* "nextAt":
+        return {
+      *   ...current,
+          nextAt: value,
+        };
 
-      return;
+      case "priority":
+        return {
+          ...current,
+          priority: value,
+        };
+
+      default:
+        return current;
     }
+  });
 
-    if (
-      requiresComment &&
-      !form.
+  setError("");
+  setSuccess("");
+}
