@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { QuotePdfUpload } from "@/components/quote-pdf-upload";
+import { QuoteImportAnalyzeButton } from "@/components/quote-import-analyze-button";
 import { requireProfile } from "@/lib/auth/authorization";
 import { createClient } from "@/lib/supabase/server";
 
@@ -75,9 +76,16 @@ export default async function ImportQuotePage() {
                   </p>
                   {item.error_message && <p className="mt-1 text-sm text-red-700">{item.error_message}</p>}
                 </div>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
-                  {formatStatus(item.status)}
-                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
+                    {formatStatus(item.status)}
+                  </span>
+
+                  <QuoteImportAnalyzeButton
+                    importId={item.id}
+                    status={item.status}
+                  />
+                </div>
               </article>
             ))}
           </div>
