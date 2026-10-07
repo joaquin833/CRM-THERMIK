@@ -22,6 +22,9 @@ const extractedQuoteSchema = z.object({
   fecha_validez: z.string().trim().nullable(),
   cliente: z.string().trim().nullable(),
   rut_cliente: z.string().trim().nullable(),
+  nombre_contacto: z.string().trim().nullable(),
+  telefono_contacto: z.string().trim().nullable(),
+  correo_contacto: z.string().trim().nullable(),
   proyecto: z.string().trim().nullable(),
   direccion_proyecto: z.string().trim().nullable(),
   moneda: z.string().trim().default("CLP"),
@@ -259,6 +262,9 @@ Usa exactamente esta estructura:
   "fecha_validez": "YYYY-MM-DD o null",
   "cliente": "texto o null",
   "rut_cliente": "texto o null",
+  "nombre_contacto": "texto o null",
+  "telefono_contacto": "texto o null",
+  "correo_contacto": "texto o null",
   "proyecto": "texto o null",
   "direccion_proyecto": "texto o null",
   "moneda": "CLP",
@@ -284,7 +290,10 @@ Reglas:
 - Los montos deben ser números enteros sin símbolo de moneda ni separadores.
 - Usa null cuando un dato no aparece claramente.
 - neto_afecto, neto_exento, iva y total deben corresponder al resumen oficial.
-- No confundas datos de Thermikhaus con datos del cliente.
+- No confundas datos de Thermikhaus, del vendedor o del emisor con los datos del cliente.
+- telefono_contacto debe corresponder al cliente o contacto destinatario. Si no es inequívoco, usa null.
+- correo_contacto debe corresponder al cliente o contacto destinatario. Si no es inequívoco, usa null.
+- Normaliza teléfonos chilenos a un formato legible, preferentemente +56 9 XXXX XXXX, sin inventar dígitos.
 - El número de cotización es la referencia comercial principal.
 - Conserva los ítems en el orden del documento.
 `;
@@ -352,6 +361,9 @@ function buildConfidence(
     numero_cotizacion: quote.numero_cotizacion ? 1 : 0,
     fecha_emision: quote.fecha_emision ? 0.9 : 0,
     cliente: quote.cliente ? 0.7 : 0,
+    nombre_contacto: quote.nombre_contacto ? 0.7 : 0,
+    telefono_contacto: quote.telefono_contacto ? 0.75 : 0,
+    correo_contacto: quote.correo_contacto ? 0.8 : 0,
     proyecto: quote.proyecto ? 0.8 : 0,
     neto: quote.neto_afecto !== null ? 0.95 : 0,
     iva: quote.iva !== null ? 0.95 : 0,

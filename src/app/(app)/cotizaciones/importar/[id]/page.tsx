@@ -23,6 +23,9 @@ type ExtractedQuote = {
   fecha_validez?: string | null;
   cliente?: string | null;
   rut_cliente?: string | null;
+  nombre_contacto?: string | null;
+  telefono_contacto?: string | null;
+  correo_contacto?: string | null;
   proyecto?: string | null;
   direccion_proyecto?: string | null;
   moneda?: string | null;
@@ -118,8 +121,11 @@ export default async function ImportReviewPage({ params }: PageProps) {
           <Field label="N.º de cotización" value={quote.numero_cotizacion} />
           <Field label="Fecha de emisión" value={quote.fecha_emision} />
           <Field label="Fecha de validez" value={quote.fecha_validez} />
-          <Field label="Cliente" value={quote.cliente} />
+          <Field label="Cliente o empresa" value={quote.cliente} />
           <Field label="RUT del cliente" value={quote.rut_cliente} />
+          <Field label="Nombre del contacto" value={quote.nombre_contacto} />
+          <Field label="Celular del contacto" value={quote.telefono_contacto} />
+          <Field label="Correo del contacto" value={quote.correo_contacto} />
           <Field label="Proyecto" value={quote.proyecto} />
           <Field label="Dirección del proyecto" value={quote.direccion_proyecto} />
           <Field label="Metros cuadrados" value={quote.metros_cuadrados} />
