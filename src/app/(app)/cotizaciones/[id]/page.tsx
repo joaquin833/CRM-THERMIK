@@ -331,13 +331,13 @@ export default async function Page({ params }: PageProps) {
                     </span>
                   </div>
 
-                  {activity.descripcion && (
+                  {Boolean(activity.descripcion) && (
                     <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
                       {String(activity.descripcion)}
                     </p>
                   )}
 
-                  {activity.proxima_accion && (
+                  {Boolean(activity.proxima_accion) && (
                     <p className="mt-3 text-sm text-slate-700">
                       <strong>Próxima acción:</strong>{" "}
                       {String(activity.proxima_accion)}
@@ -402,7 +402,7 @@ export default async function Page({ params }: PageProps) {
                       Google Calendar:{" "}
                       {task.sincronizado_google
                         ? "Sincronizado"
-                        : task.google_sync_status || "Pendiente"}
+                        : displayText(task.google_sync_status, "Pendiente")}
                     </p>
                   </article>
                 );
@@ -435,7 +435,7 @@ export default async function Page({ params }: PageProps) {
                 <p className="mt-1 text-sm text-slate-500">
                   {formatDateTime(String(entry.created_at))}
                 </p>
-                {entry.comentario && (
+                {Boolean(entry.comentario) && (
                   <p className="mt-2 text-sm text-slate-700">
                     {String(entry.comentario)}
                   </p>
