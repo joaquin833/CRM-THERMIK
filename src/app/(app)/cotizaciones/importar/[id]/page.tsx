@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
-import { clp } from "@/lib/money";
+import { QuoteImportReviewForm } from "@/components/quote-import-review-form";
 import { requireProfile } from "@/lib/auth/authorization";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,7 +50,7 @@ export default async function ImportReviewPage({ params }: PageProps) {
 
   const result = await supabase
     .from("quote_pdf_imports")
-    .select("id,file_name,file_size,status,parsed_data,validation_errors,validation_warnings,confidence,error_message,analyzed_at,created_at")
+    .select("id,file_name,status,parsed_data,validation_errors,validation_warnings,error_message")
     .eq("id", id)
     .eq("organization_id", profile.organization_id)
     .maybeSingle();
@@ -94,106 +94,90 @@ export default async function ImportReviewPage({ params }: PageProps) {
       </div>
 
       {errors.length > 0 && (
-        <section className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-5">
-          <h2 className="font-semibold text-red-950">Errores que deben revisarse</h2>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-red-800">
-            {errors.map((message) => <li key={message}>{message}</li>)}
-          </ul>
-        </section>
+        <MessageList
+          title="Errores que deben revisarse"
+          messages={errors}
+          tone="error"
+        />
       )}
 
       {warnings.length > 0 && (
-        <section className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-5">
-          <h2 className="font-semibold text-amber-950">Advertencias</h2>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-amber-900">
-            {warnings.map((message) => <li key={message}>{message}</li>)}
-          </ul>
-        </section>
+        <MessageList
+          title="Advertencias"
+          messages={warnings}
+          tone="warning"
+        />
       )}
 
-      <section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-950">Datos extraídos del PDF</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Revisa todos los campos antes de confirmar la importación. En esta etapa aún no se crea la cotización.
-        </p>
-
-        <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="N.º de cotización" value={quote.numero_cotizacion} />
-          <Field label="Fecha de emisión" value={quote.fecha_emision} />
-          <Field label="Fecha de validez" value={quote.fecha_validez} />
-          <Field label="Cliente o empresa" value={quote.cliente} />
-          <Field label="RUT del cliente" value={quote.rut_cliente} />
-          <Field label="Nombre del contacto" value={quote.nombre_contacto} />
-          <Field label="Celular del contacto" value={quote.telefono_contacto} />
-          <Field label="Correo del contacto" value={quote.correo_contacto} />
-          <Field label="Proyecto" value={quote.proyecto} />
-          <Field label="Dirección del proyecto" value={quote.direccion_proyecto} />
-          <Field label="Metros cuadrados" value={quote.metros_cuadrados} />
-          <Field label="Plazo de ejecución" value={quote.plazo_ejecucion} />
-          <Field label="Neto afecto" value={money(quote.neto_afecto)} />
-          <Field label="Neto exento" value={money(quote.neto_exento)} />
-          <Field label="IVA" value={money(quote.iva)} />
-          <Field label="Total" value={money(quote.total)} />
-        </dl>
-      </section>
-
-      <section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold text-slate-950">Ítems detectados</h2>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
-            {items.length}
-          </span>
-        </div>
-
-        {items.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-dashed p-8 text-center text-sm text-slate-500">
-            No se detectaron ítems estructurados.
-          </p>
-        ) : (
-          <div className="mt-4 divide-y">
-            {items.map((item, index) => (
-              <article key={`${index}-${item.descripcion ?? "item"}`} className="grid gap-3 py-4 sm:grid-cols-[1fr_auto]">
-                <div>
-                  <p className="font-medium text-slate-900">
-                    {item.descripcion ?? "Sin descripción"}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {item.cantidad ?? "Sin cantidad"} {item.unidad ?? ""}
-                    {item.valor_unitario !== null && item.valor_unitario !== undefined
-                      ? ` · Unitario ${clp(item.valor_unitario)}`
-                      : ""}
-                  </p>
-                </div>
-                <p className="font-semibold text-slate-900">{money(item.subtotal)}</p>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <div className="mt-6">
+        <QuoteImportReviewForm
+          importId={record.id}
+          initialData={{
+            numero_cotizacion: quote.numero_cotizacion ?? "",
+            fecha_emision: quote.fecha_emision ?? null,
+            fecha_validez: quote.fecha_validez ?? null,
+            cliente: quote.cliente ?? null,
+            rut_cliente: quote.rut_cliente ?? null,
+            nombre_contacto: quote.nombre_contacto ?? null,
+            telefono_contacto: quote.telefono_contacto ?? null,
+            correo_contacto: quote.correo_contacto ?? null,
+            proyecto: quote.proyecto ?? null,
+            direccion_proyecto: quote.direccion_proyecto ?? null,
+            moneda: quote.moneda ?? "CLP",
+            neto_afecto: quote.neto_afecto ?? null,
+            neto_exento: quote.neto_exento ?? null,
+            iva: quote.iva ?? null,
+            total: quote.total ?? null,
+            metros_cuadrados: quote.metros_cuadrados ?? null,
+            plazo_ejecucion: quote.plazo_ejecucion ?? null,
+            condiciones: quote.condiciones ?? [],
+            items: items.map((item) => ({
+              descripcion: item.descripcion ?? "Ítem sin descripción",
+              cantidad: item.cantidad ?? null,
+              unidad: item.unidad ?? null,
+              valor_unitario: item.valor_unitario ?? null,
+              subtotal: item.subtotal ?? null,
+            })),
+          }}
+        />
+      </div>
 
       <section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
         <p className="font-semibold text-blue-950">Siguiente etapa</p>
         <p className="mt-1 text-sm text-blue-800">
-          Después de validar esta pantalla agregaremos la edición de campos, la vinculación con contacto, empresa, proyecto y oportunidad, y el botón Confirmar importación.
+          Guarda las correcciones. Luego vincularemos esta información con un
+          contacto, empresa, proyecto y oportunidad antes de confirmar la
+          importación.
         </p>
       </section>
     </AppShell>
   );
 }
 
-function Field({ label, value }: { label: string; value: unknown }) {
-  return (
-    <div className="rounded-xl border bg-slate-50 p-4">
-      <dt className="text-sm text-slate-500">{label}</dt>
-      <dd className="mt-1 font-medium text-slate-900">
-        {value === null || value === undefined || value === "" ? "No identificado" : String(value)}
-      </dd>
-    </div>
-  );
-}
+function MessageList({
+  title,
+  messages,
+  tone,
+}: {
+  title: string;
+  messages: string[];
+  tone: "error" | "warning";
+}) {
+  const className =
+    tone === "error"
+      ? "mt-6 rounded-2xl border border-red-300 bg-red-50 p-5 text-red-900"
+      : "mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-900";
 
-function money(value: number | null | undefined): string {
-  return value === null || value === undefined ? "No identificado" : clp(value);
+  return (
+    <section className={className}>
+      <h2 className="font-semibold">{title}</h2>
+      <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
+        {messages.map((message) => (
+          <li key={message}>{message}</li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 function formatStatus(value: string): string {
@@ -201,7 +185,7 @@ function formatStatus(value: string): string {
     uploaded: "Pendiente de análisis",
     analyzing: "Analizando",
     review: "Requiere revisión",
-    ready: "Listo para revisar",
+    ready: "Listo para vincular",
     confirmed: "Importado",
     duplicate: "Duplicado",
     error: "Error",
