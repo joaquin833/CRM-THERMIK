@@ -1,15 +1,18 @@
+import type { ReactNode } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { QuoteNumberBadge, StatusBadge } from "@/components/brand";
+import { InitialQuoteFollowUpForm } from "@/components/initial-quote-followup-form";
 import { QuoteFollowUpForm } from "@/components/quote-followup-form";
 import { QuotePdfLink } from "@/components/quote-pdf-link";
 import { clp } from "@/lib/money";
 import { getQuote } from "@/lib/services/quotes";
 
 type PageProps = {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 };
+
+type GenericRecord = Record<string, unknown>;
 
 type ActivityResultOption = {
   id: string;
@@ -27,15 +30,11 @@ export default async function Page({ params }: PageProps) {
   const { id } = await params;
   const quote = await getQuote(id);
 
-  const contact = firstRelation<Record<string, unknown>>(quote.contactos);
-  const company = firstRelation<Record<string, unknown>>(quote.empresas);
-  const project = firstRelation<Record<string, unknown>>(quote.proyectos);
-  const opportunity = firstRelation<Record<string, unknown>>(
-    quote.oportunidades,
-  );
-  const externalSource = firstRelation<Record<string, unknown>>(
-    quote.external_sources,
-  );
+  const contact = firstRelation<GenericRecord>(quote.contactos);
+  const company = firstRelation<GenericRecord>(quote.empresas);
+  const project = firstRelation<GenericRecord>(quote.proyectos);
+  const opportunity = firstRelation<GenericRecord>(quote.oportunidades);
+  const externalSource = firstRelation<GenericRecord>(quote.external_sources);
 
   const contactName = [contact?.nombre, contact?.apellido]
     .filter(Boolean)
@@ -55,46 +54,32 @@ export default async function Page({ params }: PageProps) {
         .filter(Boolean)
         .join(" ")
     : "Sin responsable";
-  const items = Array.isArray(quote.quote_items) ? quote.quote_items : [];
-  const activities = Array.isArray(quote.activities) ? quote.activities : [];
-  const pendingTasks = Array.isArray(quote.pending_tasks)
-    ? quote.pending_tasks
-    : [];
-  const stateHistory = Array.isArray(quote.state_history)
-    ? quote.state_history
-    : [];
-  const activityResults = (
-    Array.isArray(quote.activity_results) ? quote.activity_results : []
-  ).map((result: Record<string, unknown>) => ({
-    id: String(result.id),
-    codigo: String(result.codigo),
-    nombre: String(result.nombre),
-    requiere_proxima_accion: Boolean(result.requiere_proxima_accion),
-    requiere_fecha: Boolean(result.requiere_fecha),
-    requiere_comentario: Boolean(result.requiere_comentario),
-    cierra_oportunidad: Boolean(result.cierra_oportunidad),
-    resultado_cierre:
-      result.resultado_cierre === null || result.resultado_cierre === undefined
-        ? null
-        : String(result.resultado_cierre),
-    orden: Number(result.orden ?? 0),
-  })) as ActivityResultOption[];
+
+  const items = asRecordArray(quote.quote_items);
+  const activities = asRecordArray(quote.activities);
+  const pendingTasks = asRecordArray(quote.pending_tasks);
+  const stateHistory = asRecordArray(quote.state_history);
+  const activityResults = asRecordArray(quote.activity_results).map(
+    toActivityResult,
+  );
+
+  const needsInitialFollowUp =
+    pendingTasks.length === 0 && !quote.fecha_proximo_seguimiento;
 
   return (
     <AppShell>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <QuoteNumberBadge number={quote.numero_cotizacion} />
           <h1 className="mt-3 text-3xl font-bold text-slate-950">
             {projectName}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Gestión y seguimiento comercial de una cotización emitida por el
-            sistema oficial.
+            Gestión y seguimiento comercial de una cotización oficial.
           </p>
         </div>
         <StatusBadge>{commercialStatus}</StatusBadge>
-      </div>
+      </header>
 
       <section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
         <p className="font-semibold text-blue-950">
@@ -102,7 +87,7 @@ export default async function Page({ params }: PageProps) {
         </p>
         <p className="mt-1 text-sm text-blue-800">
           El número, los ítems y los valores económicos provienen del sistema
-          oficial y no pueden modificarse desde el CRM.
+          oficial y no se modifican desde el CRM.
         </p>
       </section>
 
@@ -117,7 +102,8 @@ export default async function Page({ params }: PageProps) {
 
       {quote.commercial_indicators?.requires_commercial_action && (
         <Alert tone="warning" title="Falta programar una próxima acción">
-          Registra un seguimiento para que la cotización no quede sin gestión.
+          Programa el primer seguimiento para que la cotización no quede sin
+          gestión.
         </Alert>
       )}
 
@@ -191,19 +177,17 @@ export default async function Page({ params }: PageProps) {
               <h2 className="text-xl font-semibold text-slate-950">
                 Ítems oficiales
               </h2>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
-                {items.length}
-              </span>
+              <Count value={items.length} />
             </div>
 
             {items.length === 0 ? (
               <EmptyState>
-                No hay ítems estructurados. Utiliza el PDF original como
-                documento oficial.
+                No hay ítems estructurados. Utiliza el PDF como documento
+                oficial.
               </EmptyState>
             ) : (
               <div className="mt-4 divide-y">
-                {items.map((item: Record<string, unknown>) => (
+                {items.map((item) => (
                   <article
                     key={String(item.id)}
                     className="flex flex-wrap items-start justify-between gap-4 py-4 first:pt-0"
@@ -274,6 +258,15 @@ export default async function Page({ params }: PageProps) {
             </dl>
           </section>
 
+          {needsInitialFollowUp && (
+            <InitialQuoteFollowUpForm
+              quoteId={quote.id}
+              quoteNumber={quote.numero_cotizacion}
+              currentAction={quote.proxima_accion}
+              currentDueAt={quote.fecha_proximo_seguimiento}
+            />
+          )}
+
           <QuoteFollowUpForm
             quoteId={quote.id}
             quoteNumber={quote.numero_cotizacion}
@@ -297,7 +290,7 @@ export default async function Page({ params }: PageProps) {
             </EmptyState>
           ) : (
             <div className="mt-4 grid gap-3">
-              {activities.map((activity: Record<string, unknown>) => (
+              {activities.map((activity) => (
                 <article
                   key={String(activity.id)}
                   className="rounded-xl border p-4"
@@ -348,7 +341,7 @@ export default async function Page({ params }: PageProps) {
             </EmptyState>
           ) : (
             <div className="mt-4 grid gap-3">
-              {pendingTasks.map((task: Record<string, unknown>) => {
+              {pendingTasks.map((task) => {
                 const dueDate = displayText(task.fecha_hora_vencimiento, "");
                 const timestamp = dueDate ? new Date(dueDate).getTime() : NaN;
                 const overdue =
@@ -403,7 +396,7 @@ export default async function Page({ params }: PageProps) {
           </EmptyState>
         ) : (
           <div className="mt-4 grid gap-4">
-            {stateHistory.map((entry: Record<string, unknown>) => (
+            {stateHistory.map((entry) => (
               <article
                 key={String(entry.id)}
                 className="border-l-2 border-emerald-500 pl-4"
@@ -424,15 +417,30 @@ export default async function Page({ params }: PageProps) {
   );
 }
 
+function toActivityResult(result: GenericRecord): ActivityResultOption {
+  return {
+    id: String(result.id),
+    codigo: String(result.codigo),
+    nombre: String(result.nombre),
+    requiere_proxima_accion: Boolean(result.requiere_proxima_accion),
+    requiere_fecha: Boolean(result.requiere_fecha),
+    requiere_comentario: Boolean(result.requiere_comentario),
+    cierra_oportunidad: Boolean(result.cierra_oportunidad),
+    resultado_cierre:
+      result.resultado_cierre === null || result.resultado_cierre === undefined
+        ? null
+        : String(result.resultado_cierre),
+    orden: Number(result.orden ?? 0),
+  };
+}
+
+function asRecordArray(value: unknown): GenericRecord[] {
+  return Array.isArray(value) ? (value as GenericRecord[]) : [];
+}
+
 function firstRelation<T>(value: unknown): T | null {
-  if (Array.isArray(value)) {
-    return (value[0] as T | undefined) ?? null;
-  }
-
-  if (value && typeof value === "object") {
-    return value as T;
-  }
-
+  if (Array.isArray(value)) return (value[0] as T | undefined) ?? null;
+  if (value && typeof value === "object") return value as T;
   return null;
 }
 
@@ -441,10 +449,7 @@ function cleanText(value: unknown): string {
 }
 
 function displayText(value: unknown, fallback = "Sin registrar"): string {
-  if (value === null || value === undefined || value === "") {
-    return fallback;
-  }
-
+  if (value === null || value === undefined || value === "") return fallback;
   return String(value);
 }
 
@@ -489,7 +494,7 @@ function Alert({
   tone,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   tone: "error" | "warning";
 }) {
   const className =
@@ -505,7 +510,7 @@ function Alert({
   );
 }
 
-function EmptyState({ children }: { children: React.ReactNode }) {
+function EmptyState({ children }: { children: ReactNode }) {
   return (
     <p className="mt-4 rounded-xl border border-dashed p-6 text-center text-sm text-slate-500">
       {children}
@@ -520,4 +525,3 @@ function Count({ value }: { value: number }) {
     </span>
   );
 }
-
