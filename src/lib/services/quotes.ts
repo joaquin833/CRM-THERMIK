@@ -6,13 +6,19 @@ import { normalizeQuoteNumber } from "@/lib/quote-number";
 import { createClient } from "@/lib/supabase/server";
 
 const itemSchema = z.object({
-  descripcion: z.string().trim().min(1),
+  descripcion: z
+    .string()
+    .trim()
+    .min(1),
 
   cantidad: z.coerce
     .number()
     .positive(),
 
-  unidad: z.string().trim().min(1),
+  unidad: z
+    .string()
+    .trim()
+    .min(1),
 
   valor_unitario_original: z.coerce
     .number()
@@ -97,11 +103,11 @@ export const newQuoteSchema = z.object({
 });
 
 /**
- * Función heredada de creación interna de cotizaciones.
+ * Creación interna heredada.
  *
- * Se conserva temporalmente para evitar romper pantallas existentes.
- * Posteriormente será retirada de la interfaz porque las cotizaciones
- * oficiales provienen del sistema externo.
+ * Se mantiene temporalmente para no romper otras pantallas.
+ * El flujo principal del CRM utiliza cotizaciones importadas
+ * desde el sistema externo.
  */
 export async function createQuote(
   raw: unknown
@@ -118,15 +124,17 @@ export async function createQuote(
   const item =
     itemSchema.parse(input);
 
-  const calculated = calculateItem({
-    cantidad: item.cantidad,
+  const calculated =
+    calculateItem({
+      cantidad:
+        item.cantidad,
 
-    valorUnitarioOriginal:
-      item.valor_unitario_original,
+      valorUnitarioOriginal:
+        item.valor_unitario_original,
 
-    porcentajeDescuento:
-      item.porcentaje_descuento,
-  });
+      porcentajeDescuento:
+        item.porcentaje_descuento,
+    });
 
   const supabase =
     await createClient();
@@ -245,8 +253,8 @@ export async function createQuote(
 }
 
 /**
- * Obtiene una cotización externa junto con toda su
- * información oficial y su gestión comercial.
+ * Obtiene una cotización con sus datos oficiales,
+ * actividades, tareas y gestión comercial.
  */
 export async function getQuote(
   id: string
@@ -284,9 +292,7 @@ export async function getQuote(
           razon_social,
           nombre_fantasia,
           rut,
-          giro,
-          telefono,
-          correo
+          giro
         ),
         proyectos (
           id,
@@ -351,10 +357,16 @@ export async function getQuote(
         created_at,
         updated_at
       `)
-      .eq("cotizacion_id", id)
-      .order("posicion", {
-        ascending: true,
-      }),
+      .eq(
+        "cotizacion_id",
+        id
+      )
+      .order(
+        "posicion",
+        {
+          ascending: true,
+        }
+      ),
 
     supabase
       .from("state_history")
@@ -379,9 +391,12 @@ export async function getQuote(
         "entidad_id",
         id
       )
-      .order("created_at", {
-        ascending: false,
-      }),
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      ),
 
     supabase
       .from("activities")
@@ -477,9 +492,12 @@ export async function getQuote(
         "estado",
         "activo"
       )
-      .order("orden", {
-        ascending: true,
-      }),
+      .order(
+        "orden",
+        {
+          ascending: true,
+        }
+      ),
 
     supabase
       .from("loss_reasons")
@@ -495,9 +513,12 @@ export async function getQuote(
         "estado",
         "activo"
       )
-      .order("orden", {
-        ascending: true,
-      }),
+      .order(
+        "orden",
+        {
+          ascending: true,
+        }
+      ),
 
     supabase
       .from("commercial_closures")
@@ -519,248 +540,21 @@ export async function getQuote(
           nombre
         )
       `)
-      .or(
-        `cotizacion_ganadora_id.eq.${id}`
+      .eq(
+        "cotizacion_ganadora_id",
+        id
       )
-      .order("fecha_cierre", {
-        ascending: false,
-      }),
+      .order(
+        "fecha_cierre",
+        {
+          ascending: false,
+        }
+      ),
 
     supabase
       .from("quote_relations")
       .select(`
         id,
         cotizacion_origen_id,
-        cotizacion_relacionada_id,
-        tipo_relacion,
-        motivo,
-        created_by,
-        created_at
-      `)
-      .or(
-        `cotizacion_origen_id.eq.${id},cotizacion_relacionada_id.eq.${id}`
-      )
-      .order("created_at", {
-        ascending: false,
-      }),
-  ]);
-
-  if (quoteResult.error) {
-    throw new Error(
-      quoteResult.error.message
-    );
-  }
-
-  if (itemsResult.error) {
-    throw new Error(
-      itemsResult.error.message
-    );
-  }
-
-  if (historyResult.error) {
-    throw new Error(
-      historyResult.error.message
-    );
-  }
-
-  if (activitiesResult.error) {
-    throw new Error(
-      activitiesResult.error.message
-    );
-  }
-
-  if (tasksResult.error) {
-    throw new Error(
-      tasksResult.error.message
-    );
-  }
-
-  if (activityResultsResult.error) {
-    throw new Error(
-      activityResultsResult.error.message
-    );
-  }
-
-  if (lossReasonsResult.error) {
-    throw new Error(
-      lossReasonsResult.error.message
-    );
-  }
-
-  if (closuresResult.error) {
-    throw new Error(
-      closuresResult.error.message
-    );
-  }
-
-  if (relationsResult.error) {
-    throw new Error(
-      relationsResult.error.message
-    );
-  }
-
-  const quote =
-    quoteResult.data;
-
-  let responsibleProfile = null;
-
-  if (
-    quote.ejecutivo_responsable_id
-  ) {
-    const responsibleResult =
-      await supabase
-        .from("profiles")
-        .select(`
-          id,
-          nombre,
-          apellido,
-          correo,
-          telefono,
-          cargo,
-          rol,
-          estado,
-          google_calendar_connected
-        `)
-        .eq(
-          "id",
-          quote.ejecutivo_responsable_id
-        )
-        .maybeSingle();
-
-    if (
-      responsibleResult.error
-    ) {
-      throw new Error(
-        responsibleResult.error.message
-      );
-    }
-
-    responsibleProfile =
-      responsibleResult.data;
-  }
-
-  const tasks =
-    tasksResult.data ?? [];
-
-  const pendingTasks =
-    tasks.filter(
-      (task) =>
-        task.estado ===
-          "pendiente" ||
-        task.estado ===
-          "en_curso"
-    );
-
-  const completedTasks =
-    tasks.filter(
-      (task) =>
-        task.estado ===
-          "completada" ||
-        task.estado ===
-          "cancelada"
-    );
-
-  const overdueTasks =
-    pendingTasks.filter(
-      (task) =>
-        new Date(
-          task.fecha_hora_vencimiento
-        ).getTime() <
-        Date.now()
-    );
-
-  const nextPendingTask =
-    pendingTasks.find(
-      (task) =>
-        new Date(
-          task.fecha_hora_vencimiento
-        ).getTime() >=
-        Date.now()
-    ) ?? null;
-
-  const lastActivity =
-    activitiesResult.data?.[0] ??
-    null;
-
-  const hasPendingFollowUp =
-    pendingTasks.length > 0;
-
-  const hasOverdueFollowUp =
-    overdueTasks.length > 0;
-
-  const requiresCommercialAction =
-    !quote.fecha_proximo_seguimiento &&
-    [
-      "Importada",
-      "Pendiente de asignación",
-      "Pendiente de contacto",
-      "Enviada",
-      "Recibida por el cliente",
-      "Contacto intentado",
-      "En evaluación",
-      "Requiere aclaración",
-      "Requiere nueva cotización",
-      "En negociación",
-    ].includes(
-      quote.estado_comercial
-    );
-
-  return {
-    ...quote,
-
-    quote_items:
-      itemsResult.data ?? [],
-
-    state_history:
-      historyResult.data ?? [],
-
-    activities:
-      activitiesResult.data ?? [],
-
-    tasks,
-
-    pending_tasks:
-      pendingTasks,
-
-    completed_tasks:
-      completedTasks,
-
-    overdue_tasks:
-      overdueTasks,
-
-    next_pending_task:
-      nextPendingTask,
-
-    last_activity:
-      lastActivity,
-
-    activity_results:
-      activityResultsResult.data ??
-      [],
-
-    loss_reasons:
-      lossReasonsResult.data ??
-      [],
-
-    commercial_closures:
-      closuresResult.data ?? [],
-
-    quote_relations:
-      relationsResult.data ?? [],
-
-    responsible_profile:
-      responsibleProfile,
-
-    commercial_indicators: {
-      has_pending_follow_up:
-        hasPendingFollowUp,
-
-      has_overdue_follow_up:
-        hasOverdueFollowUp,
-
-      requires_commercial_action:
-        requiresCommercialAction,
-    },
-  };
-}
+        cotizacion
         
