@@ -11,6 +11,24 @@ type PageProps = {
   }>;
 };
 
+type ContactRelation = {
+  nombre: string | null;
+  apellido: string | null;
+};
+
+type CompanyRelation = {
+  razon_social: string | null;
+};
+
+type ProjectRelation = {
+  nombre: string | null;
+};
+
+type ResponsibleRelation = {
+  nombre: string | null;
+  apellido: string | null;
+};
+
 export default async function Page({ searchParams }: PageProps) {
   const { q = "" } = await searchParams;
   const supabase = await createClient();
@@ -26,6 +44,8 @@ export default async function Page({ searchParams }: PageProps) {
       fecha_emision,
       fecha_validez,
       fecha_proximo_seguimiento,
+      proxima_accion,
+      ejecutivo_responsable_id,
       contactos (
         nombre,
         apellido
@@ -58,6 +78,33 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   const quotes = data ?? [];
+  const responsibleIds = [
+    ...new Set(
+      quotes
+        .map((quote) => quote.ejecutivo_responsable_id)
+        .filter((value): value is string => Boolean(value))
+    ),
+  ];
+
+  const responsibleMap = new Map<string, ResponsibleRelation>();
+
+  if (responsibleIds.length > 0) {
+    const responsibleResult = await supabase
+      .from("profiles")
+      .select("id,nombre,apellido")
+      .in("id", responsibleIds);
+
+    if (responsibleResult.error) {
+      throw new Error(responsibleResult.error.message);
+    }
+
+    for (const profile of responsibleResult.data ?? []) {
+      responsibleMap.set(profile.id, {
+        nombre: profile.nombre,
+        apellido: profile.apellido,
+      });
+    }
+  }
 
   return (
     <AppShell>
@@ -81,7 +128,7 @@ export default async function Page({ searchParams }: PageProps) {
         </Link>
       </div>
 
-      <form className="mt-5">
+      <form className="mt-5 flex flex-wrap gap-3">
         <label className="sr-only" htmlFor="quote-search">
           Buscar por número de cotización
         </label>
@@ -93,6 +140,13 @@ export default async function Page({ searchParams }: PageProps) {
           className="w-full max-w-md rounded-lg border bg-white p-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
           placeholder="Buscar N.º de cotización"
         />
+
+        <button
+          type="submit"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Buscar
+        </button>
       </form>
 
       <div className="mt-5 overflow-x-auto rounded-2xl border bg-white shadow-sm">
@@ -105,42 +159,55 @@ export default async function Page({ searchParams }: PageProps) {
               <th className="p-3">Fecha</th>
               <th className="p-3">Total</th>
               <th className="p-3">Estado comercial</th>
+              <th className="p-3">Responsable</th>
+              <th className="p-3">Próxima acción</th>
               <th className="p-3">Próximo seguimiento</th>
             </tr>
           </thead>
 
           <tbody>
             {quotes.map((quote) => {
-              const company = quote.empresas?.[0]?.razon_social;
-              const contact = quote.contactos?.[0];
+              const contact = firstRelation<ContactRelation>(quote.contactos);
+              const company = firstRelation<CompanyRelation>(quote.empresas);
+              const project = firstRelation<ProjectRelation>(quote.proyectos);
+              const responsible = quote.ejecutivo_responsable_id
+                ? responsibleMap.get(quote.ejecutivo_responsable_id) ?? null
+                : null;
+
               const contactName = [contact?.nombre, contact?.apellido]
                 .filter(Boolean)
                 .join(" ");
+              const responsibleName = [
+                responsible?.nombre,
+                responsible?.apellido,
+              ]
+                .filter(Boolean)
+                .join(" ");
+              const clientName =
+                cleanText(company?.razon_social) ||
+                cleanText(contactName) ||
+                "Sin cliente vinculado";
+              const projectName =
+                cleanText(project?.nombre) || "Sin proyecto vinculado";
 
               return (
                 <tr
-                  className="border-t transition hover:bg-slate-50"
+                  className="border-t align-top transition hover:bg-slate-50"
                   key={quote.id}
                 >
                   <td className="p-3">
                     <Link href={`/cotizaciones/${quote.id}`}>
-                      <QuoteNumberBadge
-                        number={quote.numero_cotizacion}
-                      />
+                      <QuoteNumberBadge number={quote.numero_cotizacion} />
                     </Link>
                   </td>
 
-                  <td className="p-3">
-                    {company ?? contactName ?? "Sin cliente"}
+                  <td className="p-3 font-medium text-slate-900">
+                    {clientName}
                   </td>
 
-                  <td className="p-3">
-                    {quote.proyectos?.[0]?.nombre ?? "Sin proyecto"}
-                  </td>
+                  <td className="p-3">{projectName}</td>
 
-                  <td className="p-3">
-                    {formatDate(quote.fecha_emision)}
-                  </td>
+                  <td className="p-3">{formatDate(quote.fecha_emision)}</td>
 
                   <td className="p-3 font-semibold">
                     {clp(Number(quote.total ?? 0))}
@@ -150,6 +217,14 @@ export default async function Page({ searchParams }: PageProps) {
                     <StatusBadge>
                       {quote.estado_comercial ?? quote.estado}
                     </StatusBadge>
+                  </td>
+
+                  <td className="p-3">
+                    {responsibleName || "Sin responsable"}
+                  </td>
+
+                  <td className="max-w-72 p-3">
+                    {cleanText(quote.proxima_accion) || "Sin próxima acción"}
                   </td>
 
                   <td className="p-3">
@@ -182,6 +257,22 @@ export default async function Page({ searchParams }: PageProps) {
       </div>
     </AppShell>
   );
+}
+
+function firstRelation<T>(value: unknown): T | null {
+  if (Array.isArray(value)) {
+    return (value[0] as T | undefined) ?? null;
+  }
+
+  if (value && typeof value === "object") {
+    return value as T;
+  }
+
+  return null;
+}
+
+function cleanText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function formatDate(value: string | null): string {
