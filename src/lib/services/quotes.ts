@@ -250,7 +250,6 @@ export async function getQuote(id: string) {
 
   if (quoteResult.error) throw new Error(quoteResult.error.message);
   if (itemsResult.error) throw new Error(itemsResult.error.message);
-  if (historyResult.error) throw new Error(historyResult.error.message);
   if (activitiesResult.error) throw new Error(activitiesResult.error.message);
   if (tasksResult.error) throw new Error(tasksResult.error.message);
   if (activityResultsResult.error) {
