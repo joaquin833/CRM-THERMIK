@@ -51,7 +51,7 @@ export async function createQuote(raw: unknown) {
       organization_id: profile.organization_id,
       numero_cotizacion: input.numero_cotizacion,
       numero_cotizacion_normalizado: normalizeQuoteNumber(
-        input.numero_cotizacion
+        input.numero_cotizacion,
       ),
       oportunidad_id: input.oportunidad_id,
       contacto_id: input.contacto_id,
@@ -71,7 +71,7 @@ export async function createQuote(raw: unknown) {
     throw new Error(
       quoteError.code === "23505"
         ? "El N.º de cotización ya existe."
-        : quoteError.message
+        : quoteError.message,
     );
   }
 
@@ -114,7 +114,8 @@ export async function getQuote(id: string) {
   ] = await Promise.all([
     supabase
       .from("cotizaciones")
-      .select(`
+      .select(
+        `
         *,
         contactos (
           id,
@@ -170,7 +171,8 @@ export async function getQuote(id: string) {
           nombre,
           requiere_comentario
         )
-      `)
+      `,
+      )
       .eq("id", id)
       .is("deleted_at", null)
       .single(),
@@ -181,16 +183,15 @@ export async function getQuote(id: string) {
       .eq("cotizacion_id", id)
       .order("posicion", { ascending: true }),
 
-    supabase
-      .from("state_history")
-      .select("*")
-      .eq("entidad_tipo", "cotizacion")
-      .eq("entidad_id", id)
-      .order("created_at", { ascending: false }),
+    Promise.resolve({
+      data: [] as Record<string, unknown>[],
+      error: null,
+    }),
 
     supabase
       .from("activities")
-      .select(`
+      .select(
+        `
         *,
         activity_results (
           id,
@@ -202,7 +203,8 @@ export async function getQuote(id: string) {
           cierra_oportunidad,
           resultado_cierre
         )
-      `)
+      `,
+      )
       .eq("cotizacion_id", id)
       .order("fecha_hora_inicio", { ascending: false }),
 
@@ -226,23 +228,23 @@ export async function getQuote(id: string) {
 
     supabase
       .from("commercial_closures")
-      .select(`
+      .select(
+        `
         *,
         loss_reasons (
           id,
           codigo,
           nombre
         )
-      `)
+      `,
+      )
       .eq("cotizacion_ganadora_id", id)
       .order("fecha_cierre", { ascending: false }),
 
     supabase
       .from("quote_relations")
       .select("*")
-      .or(
-        `cotizacion_origen_id.eq.${id},cotizacion_relacionada_id.eq.${id}`
-      )
+      .or(`cotizacion_origen_id.eq.${id},cotizacion_relacionada_id.eq.${id}`)
       .order("created_at", { ascending: false }),
   ]);
 
@@ -279,10 +281,10 @@ export async function getQuote(id: string) {
 
   const tasks = tasksResult.data ?? [];
   const pendingTasks = tasks.filter(
-    (task) => task.estado === "pendiente" || task.estado === "en_curso"
+    (task) => task.estado === "pendiente" || task.estado === "en_curso",
   );
   const completedTasks = tasks.filter(
-    (task) => task.estado === "completada" || task.estado === "cancelada"
+    (task) => task.estado === "completada" || task.estado === "cancelada",
   );
   const overdueTasks = pendingTasks.filter((task) => {
     if (!task.fecha_hora_vencimiento) return false;
