@@ -1,5 +1,6 @@
 "use client";
 
+import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +19,7 @@ type Props = {
 };
 
 type ActionType = "sent" | "received" | "won" | "lost" | "postponed";
+type Payload = Record<string, unknown>;
 
 const CLOSED_STATUSES = ["Aprobada", "Perdida", "Anulada externamente"];
 
@@ -33,7 +35,6 @@ export function QuoteCommercialActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const isClosed = CLOSED_STATUSES.includes(currentStatus);
 
   function selectAction(action: ActionType): void {
@@ -44,8 +45,8 @@ export function QuoteCommercialActions({
 
   async function submit(
     endpoint: string,
-    payload: Record<string, unknown>,
-    message: string,
+    payload: Payload,
+    fallbackMessage: string,
   ): Promise<void> {
     try {
       setBusy(true);
@@ -67,7 +68,7 @@ export function QuoteCommercialActions({
         );
       }
 
-      setSuccess(result.message ?? message);
+      setSuccess(result.message ?? fallbackMessage);
       setActiveAction(null);
       router.refresh();
     } catch (operationError) {
@@ -84,19 +85,20 @@ export function QuoteCommercialActions({
   return (
     <section className="rounded-2xl border bg-white p-5 shadow-sm">
       <p className="text-sm font-medium uppercase tracking-wide text-emerald-700">
-        Acciones controladas
+        Hitos comerciales
       </p>
       <h2 className="mt-1 text-xl font-semibold text-slate-950">
-        Gestión comercial
+        Cambiar etapa comercial
       </h2>
       <p className="mt-2 text-sm text-slate-600">
-        Cotización N.º {quoteNumber}. Estado actual: {currentStatus}.
+        Cotización N.º {quoteNumber}. Estas acciones registran hitos formales;
+        la próxima tarea se programa en Registrar seguimiento.
       </p>
 
       {isClosed ? (
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          Esta cotización tiene un cierre definitivo. Las acciones comerciales
-          operativas están deshabilitadas.
+        <div className="mt-4 rounded-xl border bg-slate-50 p-4 text-sm text-slate-700">
+          Esta cotización tiene un cierre definitivo. Las acciones operativas
+          están deshabilitadas.
         </div>
       ) : (
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
@@ -131,7 +133,9 @@ export function QuoteCommercialActions({
       {activeAction === "sent" && (
         <SentForm
           busy={busy}
-          onSubmit={(payload) => submit("enviar", payload, "Envío registrado.")}
+          onSubmit={(payload) =>
+            submit("enviar", payload, "Hito de envío registrado.")
+          }
         />
       )}
 
@@ -139,7 +143,11 @@ export function QuoteCommercialActions({
         <ReceivedForm
           busy={busy}
           onSubmit={(payload) =>
-            submit("confirmar-recepcion", payload, "Recepción confirmada.")
+            submit(
+              "confirmar-recepcion",
+              payload,
+              "Hito de recepción registrado.",
+            )
           }
         />
       )}
@@ -159,7 +167,7 @@ export function QuoteCommercialActions({
           busy={busy}
           lossReasons={lossReasons}
           onSubmit={(payload) =>
-            submit("cerrar", payload, "Cotización perdida registrada.")
+            submit("cerrar", payload, "Pérdida registrada.")
           }
         />
       )}
@@ -173,23 +181,8 @@ export function QuoteCommercialActions({
         />
       )}
 
-      {error && (
-        <div
-          role="alert"
-          className="mt-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900"
-        >
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div
-          aria-live="polite"
-          className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900"
-        >
-          {success}
-        </div>
-      )}
+      {error && <Message tone="error">{error}</Message>}
+      {success && <Message tone="success">{success}</Message>}
     </section>
   );
 }
@@ -198,29 +191,21 @@ function SentForm({ busy, onSubmit }: FormProps) {
   const [channel, setChannel] = useState("Correo");
   const [sentAt, setSentAt] = useState(nowLocal());
   const [comment, setComment] = useState("");
-  const [nextAction, setNextAction] = useState(
-    "Confirmar recepción de la cotización",
-  );
-  const [nextAt, setNextAt] = useState(tomorrowLocal());
-  const [priority, setPriority] = useState("alta");
 
   return (
     <ControlledForm
-      title="Marcar como enviada"
+      title="Registrar hito de envío"
       busy={busy}
       onSubmit={() =>
         onSubmit({
           channel,
           sentAt: toIso(sentAt),
           comment: nullable(comment),
-          nextAction,
-          nextAt: toIso(nextAt),
-          priority,
         })
       }
     >
       <SelectField
-        label="Canal"
+        label="Canal de envío"
         value={channel}
         onChange={setChannel}
         options={[
@@ -233,24 +218,15 @@ function SentForm({ busy, onSubmit }: FormProps) {
       />
       <DateField label="Fecha de envío" value={sentAt} onChange={setSentAt} />
       <TextField
-        label="Comentario"
+        label="Comentario opcional"
         value={comment}
         onChange={setComment}
         multiline
       />
-      <TextField
-        label="Próxima acción"
-        value={nextAction}
-        onChange={setNextAction}
-        required
-      />
-      <DateField
-        label="Próximo seguimiento"
-        value={nextAt}
-        onChange={setNextAt}
-        future
-      />
-      <PriorityField value={priority} onChange={setPriority} />
+      <FormHint>
+        Esta acción no crea una tarea. Usa Registrar seguimiento para programar
+        el próximo contacto.
+      </FormHint>
     </ControlledForm>
   );
 }
@@ -260,15 +236,10 @@ function ReceivedForm({ busy, onSubmit }: FormProps) {
   const [receivedAt, setReceivedAt] = useState(nowLocal());
   const [confirmedBy, setConfirmedBy] = useState("");
   const [comment, setComment] = useState("");
-  const [nextAction, setNextAction] = useState(
-    "Consultar evaluación de la propuesta",
-  );
-  const [nextAt, setNextAt] = useState(tomorrowLocal());
-  const [priority, setPriority] = useState("media");
 
   return (
     <ControlledForm
-      title="Confirmar recepción"
+      title="Registrar hito de recepción"
       busy={busy}
       onSubmit={() =>
         onSubmit({
@@ -276,14 +247,11 @@ function ReceivedForm({ busy, onSubmit }: FormProps) {
           receivedAt: toIso(receivedAt),
           confirmedBy: nullable(confirmedBy),
           comment: nullable(comment),
-          nextAction,
-          nextAt: toIso(nextAt),
-          priority,
         })
       }
     >
       <SelectField
-        label="Canal"
+        label="Canal de confirmación"
         value={channel}
         onChange={setChannel}
         options={["Llamada", "WhatsApp", "Correo", "Reunion", "Otro"]}
@@ -299,24 +267,15 @@ function ReceivedForm({ busy, onSubmit }: FormProps) {
         onChange={setConfirmedBy}
       />
       <TextField
-        label="Comentario"
+        label="Comentario opcional"
         value={comment}
         onChange={setComment}
         multiline
       />
-      <TextField
-        label="Próxima acción"
-        value={nextAction}
-        onChange={setNextAction}
-        required
-      />
-      <DateField
-        label="Próximo seguimiento"
-        value={nextAt}
-        onChange={setNextAt}
-        future
-      />
-      <PriorityField value={priority} onChange={setPriority} />
+      <FormHint>
+        Esta acción no crea una tarea. Usa Registrar seguimiento para programar
+        el próximo contacto.
+      </FormHint>
     </ControlledForm>
   );
 }
@@ -456,13 +415,17 @@ function PostponedForm({ busy, onSubmit }: FormProps) {
         future
       />
       <PriorityField value={priority} onChange={setPriority} />
+      <FormHint>
+        Postergar sí crea una tarea porque la fecha de reactivación forma parte
+        del hito comercial.
+      </FormHint>
     </ControlledForm>
   );
 }
 
 type FormProps = {
   busy: boolean;
-  onSubmit: (payload: Record<string, unknown>) => Promise<void>;
+  onSubmit: (payload: Payload) => Promise<void>;
 };
 
 function ControlledForm({
@@ -471,19 +434,25 @@ function ControlledForm({
   onSubmit,
   confirmText,
   children,
-}: FormProps & {
+}: {
   title: string;
+  busy: boolean;
+  onSubmit: () => Promise<void>;
   confirmText?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    event.preventDefault();
+    if (confirmText && !window.confirm(confirmText)) return;
+    await onSubmit();
+  }
+
   return (
     <form
-      className="mt-5 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        if (confirmText && !window.confirm(confirmText)) return;
-        await onSubmit({});
-      }}
+      className="mt-5 grid gap-4 rounded-xl border bg-slate-50 p-4"
+      onSubmit={handleSubmit}
     >
       <p className="font-semibold text-slate-950">{title}</p>
       {children}
@@ -511,7 +480,11 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${active ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}
+      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+        active
+          ? "border-emerald-700 bg-emerald-700 text-white"
+          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+      }`}
     >
       {label}
     </button>
@@ -639,28 +612,58 @@ function PriorityField({
   );
 }
 
+function FormHint({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+      {children}
+    </p>
+  );
+}
+
+function Message({
+  children,
+  tone,
+}: {
+  children: ReactNode;
+  tone: "error" | "success";
+}) {
+  return (
+    <div
+      role={tone === "error" ? "alert" : undefined}
+      aria-live={tone === "success" ? "polite" : undefined}
+      className={`mt-4 rounded-xl border p-4 text-sm ${
+        tone === "error"
+          ? "border-red-300 bg-red-50 text-red-900"
+          : "border-emerald-300 bg-emerald-50 text-emerald-900"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 function nullable(value: string): string | null {
   return value.trim() || null;
 }
+
 function toIso(value: string): string {
   return new Date(value).toISOString();
 }
+
 function nowLocal(): string {
   return formatLocal(new Date());
 }
-function tomorrowLocal(): string {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  date.setHours(10, 0, 0, 0);
-  return formatLocal(date);
-}
+
 function nextWeekLocal(): string {
   const date = new Date();
   date.setDate(date.getDate() + 7);
   date.setHours(10, 0, 0, 0);
   return formatLocal(date);
 }
+
 function formatLocal(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate(),
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
