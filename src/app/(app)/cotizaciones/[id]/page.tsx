@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { QuoteNumberBadge, StatusBadge } from "@/components/brand";
 import { InitialQuoteFollowUpForm } from "@/components/initial-quote-followup-form";
+import { QuoteCommercialActions } from "@/components/quote-commercial-actions";
 import { QuoteFollowUpForm } from "@/components/quote-followup-form";
 import { QuotePdfLink } from "@/components/quote-pdf-link";
 import { clp } from "@/lib/money";
@@ -62,6 +63,11 @@ export default async function Page({ params }: PageProps) {
   const activityResults = asRecordArray(quote.activity_results).map(
     toActivityResult,
   );
+  const lossReasons = asRecordArray(quote.loss_reasons).map((reason) => ({
+    id: String(reason.id),
+    nombre: String(reason.nombre),
+    requiere_comentario: Boolean(reason.requiere_comentario),
+  }));
   const needsInitialFollowUp =
     pendingTasks.length === 0 && !quote.fecha_proximo_seguimiento;
 
@@ -264,6 +270,14 @@ export default async function Page({ params }: PageProps) {
               hasPendingFollowUp={pendingTasks.length > 0}
             />
           )}
+
+          <QuoteCommercialActions
+            quoteId={quote.id}
+            quoteNumber={quote.numero_cotizacion}
+            currentStatus={commercialStatus}
+            total={Number(quote.total ?? 0)}
+            lossReasons={lossReasons}
+          />
 
           <QuoteFollowUpForm
             quoteId={quote.id}
