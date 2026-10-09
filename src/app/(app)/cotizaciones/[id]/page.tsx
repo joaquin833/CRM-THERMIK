@@ -27,6 +27,15 @@ type ActivityResultOption = {
   orden: number;
 };
 
+const FOLLOW_UP_RESULT_CODES = new Set([
+  "NO_RESPONDIO",
+  "MENSAJE_ENVIADO",
+  "ESTA_EVALUANDO",
+  "SOLICITA_ACLARACION",
+  "SOLICITA_VISITA",
+  "SOLICITA_NUEVA_COTIZACION",
+]);
+
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
   const quote = await getQuote(id);
@@ -60,14 +69,15 @@ export default async function Page({ params }: PageProps) {
   const activities = asRecordArray(quote.activities);
   const pendingTasks = asRecordArray(quote.pending_tasks);
   const stateHistory = asRecordArray(quote.state_history);
-  const activityResults = asRecordArray(quote.activity_results).map(
-    toActivityResult,
-  );
+  const activityResults = asRecordArray(quote.activity_results)
+    .map(toActivityResult)
+    .filter((result) => FOLLOW_UP_RESULT_CODES.has(result.codigo));
   const lossReasons = asRecordArray(quote.loss_reasons).map((reason) => ({
     id: String(reason.id),
     nombre: String(reason.nombre),
     requiere_comentario: Boolean(reason.requiere_comentario),
   }));
+
   const needsInitialFollowUp =
     pendingTasks.length === 0 && !quote.fecha_proximo_seguimiento;
 
@@ -101,14 +111,13 @@ export default async function Page({ params }: PageProps) {
           tone="error"
           title="Esta cotización tiene seguimientos atrasados"
         >
-          Revisa las tareas pendientes y registra el resultado del contacto.
+          Revisa la tarea pendiente y registra el resultado del contacto.
         </Alert>
       )}
 
       {quote.commercial_indicators?.requires_commercial_action && (
         <Alert tone="warning" title="Falta programar una próxima acción">
-          Programa el primer seguimiento para que la cotización no quede sin
-          gestión.
+          Programa el seguimiento para que la cotización no quede sin gestión.
         </Alert>
       )}
 
@@ -137,7 +146,6 @@ export default async function Page({ params }: PageProps) {
                   Datos oficiales
                 </h2>
               </div>
-
               <QuotePdfLink
                 quoteId={quote.id}
                 hasPdf={Boolean(quote.archivo_pdf_url)}
@@ -238,7 +246,6 @@ export default async function Page({ params }: PageProps) {
             <h2 className="mt-1 text-xl font-semibold text-slate-950">
               Estado comercial
             </h2>
-
             <dl className="mt-5 grid gap-4">
               <DataField label="Estado" value={commercialStatus} />
               <DataField label="Responsable" value={responsibleName} />
@@ -295,7 +302,6 @@ export default async function Page({ params }: PageProps) {
             </h2>
             <Count value={activities.length} />
           </div>
-
           {activities.length === 0 ? (
             <EmptyState>
               Todavía no se han registrado actividades para esta cotización.
@@ -320,13 +326,11 @@ export default async function Page({ params }: PageProps) {
                       {displayText(activity.resultado, "Sin resultado")}
                     </span>
                   </div>
-
                   {Boolean(activity.descripcion) && (
                     <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
                       {String(activity.descripcion)}
                     </p>
                   )}
-
                   {Boolean(activity.proxima_accion) && (
                     <p className="mt-3 text-sm text-slate-700">
                       <strong>Próxima acción:</strong>{" "}
@@ -342,14 +346,13 @@ export default async function Page({ params }: PageProps) {
         <section className="rounded-2xl border bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-slate-950">
-              Seguimientos pendientes
+              Seguimiento pendiente
             </h2>
             <Count value={pendingTasks.length} />
           </div>
-
           {pendingTasks.length === 0 ? (
             <EmptyState>
-              No hay seguimientos pendientes para esta cotización.
+              No hay un seguimiento pendiente para esta cotización.
             </EmptyState>
           ) : (
             <div className="mt-4 grid gap-3">
@@ -358,7 +361,6 @@ export default async function Page({ params }: PageProps) {
                 const timestamp = dueDate ? new Date(dueDate).getTime() : NaN;
                 const overdue =
                   Number.isFinite(timestamp) && timestamp < Date.now();
-
                 return (
                   <article
                     key={String(task.id)}
@@ -400,7 +402,6 @@ export default async function Page({ params }: PageProps) {
           </h2>
           <Count value={stateHistory.length} />
         </div>
-
         {stateHistory.length === 0 ? (
           <EmptyState>
             El historial comercial se habilitará en una etapa posterior del
@@ -513,7 +514,6 @@ function Alert({
     tone === "error"
       ? "mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-900"
       : "mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950";
-
   return (
     <section className={className}>
       <p className="font-semibold">{title}</p>
