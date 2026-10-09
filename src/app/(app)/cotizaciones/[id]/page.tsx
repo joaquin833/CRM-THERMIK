@@ -62,7 +62,6 @@ export default async function Page({ params }: PageProps) {
   const activityResults = asRecordArray(quote.activity_results).map(
     toActivityResult,
   );
-
   const needsInitialFollowUp =
     pendingTasks.length === 0 && !quote.fecha_proximo_seguimiento;
 
@@ -262,8 +261,6 @@ export default async function Page({ params }: PageProps) {
             <InitialQuoteFollowUpForm
               quoteId={quote.id}
               quoteNumber={quote.numero_cotizacion}
-              currentAction={quote.proxima_accion}
-              currentDueAt={quote.fecha_proximo_seguimiento}
             />
           )}
 
