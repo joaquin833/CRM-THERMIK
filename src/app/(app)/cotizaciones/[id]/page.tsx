@@ -261,6 +261,7 @@ export default async function Page({ params }: PageProps) {
             <InitialQuoteFollowUpForm
               quoteId={quote.id}
               quoteNumber={quote.numero_cotizacion}
+              hasPendingFollowUp={pendingTasks.length > 0}
             />
           )}
 
