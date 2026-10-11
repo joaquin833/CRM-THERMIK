@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { QuoteNumberBadge, StatusBadge } from "@/components/brand";
 import { InitialQuoteFollowUpForm } from "@/components/initial-quote-followup-form";
 import { QuoteCommercialActions } from "@/components/quote-commercial-actions";
+import { QuoteCommercialTimeline } from "@/components/quote-commercial-timeline";
 import { QuoteFollowUpForm } from "@/components/quote-followup-form";
 import { QuotePdfLink } from "@/components/quote-pdf-link";
 import { clp } from "@/lib/money";
@@ -68,7 +69,6 @@ export default async function Page({ params }: PageProps) {
   const items = asRecordArray(quote.quote_items);
   const activities = asRecordArray(quote.activities);
   const pendingTasks = asRecordArray(quote.pending_tasks);
-  const stateHistory = asRecordArray(quote.state_history);
   const activityResults = asRecordArray(quote.activity_results)
     .map(toActivityResult)
     .filter((result) => FOLLOW_UP_RESULT_CODES.has(result.codigo));
@@ -77,7 +77,6 @@ export default async function Page({ params }: PageProps) {
     nombre: String(reason.nombre),
     requiere_comentario: Boolean(reason.requiere_comentario),
   }));
-
   const needsInitialFollowUp =
     pendingTasks.length === 0 && !quote.fecha_proximo_seguimiento;
 
@@ -302,6 +301,7 @@ export default async function Page({ params }: PageProps) {
             </h2>
             <Count value={activities.length} />
           </div>
+
           {activities.length === 0 ? (
             <EmptyState>
               Todavía no se han registrado actividades para esta cotización.
@@ -326,11 +326,13 @@ export default async function Page({ params }: PageProps) {
                       {displayText(activity.resultado, "Sin resultado")}
                     </span>
                   </div>
+
                   {Boolean(activity.descripcion) && (
                     <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
                       {String(activity.descripcion)}
                     </p>
                   )}
+
                   {Boolean(activity.proxima_accion) && (
                     <p className="mt-3 text-sm text-slate-700">
                       <strong>Próxima acción:</strong>{" "}
@@ -350,6 +352,7 @@ export default async function Page({ params }: PageProps) {
             </h2>
             <Count value={pendingTasks.length} />
           </div>
+
           {pendingTasks.length === 0 ? (
             <EmptyState>
               No hay un seguimiento pendiente para esta cotización.
@@ -361,6 +364,7 @@ export default async function Page({ params }: PageProps) {
                 const timestamp = dueDate ? new Date(dueDate).getTime() : NaN;
                 const overdue =
                   Number.isFinite(timestamp) && timestamp < Date.now();
+
                 return (
                   <article
                     key={String(task.id)}
@@ -395,37 +399,7 @@ export default async function Page({ params }: PageProps) {
         </section>
       </section>
 
-      <section className="mt-6 rounded-2xl border bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold text-slate-950">
-            Historial comercial
-          </h2>
-          <Count value={stateHistory.length} />
-        </div>
-        {stateHistory.length === 0 ? (
-          <EmptyState>
-            El historial comercial se habilitará en una etapa posterior del
-            bloque de Cotizaciones.
-          </EmptyState>
-        ) : (
-          <div className="mt-4 grid gap-4">
-            {stateHistory.map((entry) => (
-              <article
-                key={String(entry.id)}
-                className="border-l-2 border-emerald-500 pl-4"
-              >
-                <p className="font-semibold text-slate-900">
-                  {displayText(entry.estado_anterior, "Creada")} {" → "}
-                  {displayText(entry.estado_nuevo)}
-                </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  {formatDateTime(entry.created_at)}
-                </p>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <QuoteCommercialTimeline quoteId={quote.id} />
     </AppShell>
   );
 }
@@ -514,6 +488,7 @@ function Alert({
     tone === "error"
       ? "mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-900"
       : "mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950";
+
   return (
     <section className={className}>
       <p className="font-semibold">{title}</p>
