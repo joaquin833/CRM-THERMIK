@@ -58,8 +58,8 @@ begin
         'id', e.id,
         'razon_social', e.razon_social,
         'rut', e.rut,
-        'telefono', e.telefono,
-        'correo', e.correo,
+        'telefono', null::text,
+        'correo', null::text,
         'estado', e.estado
       )
     end,
