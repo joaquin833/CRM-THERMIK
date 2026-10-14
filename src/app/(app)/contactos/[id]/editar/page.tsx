@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
 };
 
 type CompanyOption = {
@@ -16,8 +17,12 @@ type CompanyOption = {
   razon_social: string;
 };
 
-export default async function EditContactPage({ params }: PageProps) {
+export default async function EditContactPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id } = await params;
+  const query = await searchParams;
   const data = await getContact360(id);
   const supabase = await createClient();
   const { data: companies, error } = await supabase
@@ -31,6 +36,8 @@ export default async function EditContactPage({ params }: PageProps) {
   }
 
   const name = data.contact.nombre_completo || "Contacto sin nombre";
+  const defaultReturnTo = `/contactos/${data.contact.id}`;
+  const returnTo = safeReturnTo(query.returnTo, defaultReturnTo);
 
   return (
     <AppShell>
@@ -69,8 +76,20 @@ export default async function EditContactPage({ params }: PageProps) {
           catalogs={data.catalogs}
           companies={(companies ?? []) as CompanyOption[]}
           currentCompanyId={data.company?.id ?? null}
+          returnTo={returnTo}
         />
       </div>
     </AppShell>
   );
+}
+
+function safeReturnTo(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+
+  // Solo acepta rutas internas conocidas. Evita redirecciones a dominios externos.
+  if (value.startsWith("/cotizaciones/") || value.startsWith("/contactos/")) {
+    return value;
+  }
+
+  return fallback;
 }

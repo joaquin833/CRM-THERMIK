@@ -18,6 +18,7 @@ type Props = {
   catalogs: ContactCatalogs;
   companies: CompanyOption[];
   currentCompanyId: string | null;
+  returnTo: string;
 };
 
 type WarningMatch = {
@@ -42,6 +43,7 @@ export function ContactEditForm({
   catalogs,
   companies,
   currentCompanyId,
+  returnTo,
 }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -118,7 +120,7 @@ export function ContactEditForm({
       }
 
       setWarnings(messages);
-      router.push(`/contactos/${contact.id}`);
+      router.push(returnTo);
       router.refresh();
     } catch (requestError) {
       setError(
@@ -267,7 +269,7 @@ export function ContactEditForm({
       <div className="flex flex-wrap justify-end gap-3">
         <button
           type="button"
-          onClick={() => router.push(`/contactos/${contact.id}`)}
+          onClick={() => router.push(returnTo)}
           className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           Cancelar
