@@ -104,7 +104,6 @@ export async function getQuote(id: string) {
   const [
     quoteResult,
     itemsResult,
-    historyResult,
     activitiesResult,
     tasksResult,
     activityResultsResult,
@@ -186,13 +185,6 @@ export async function getQuote(id: string) {
       .order("posicion", { ascending: true }),
 
     supabase
-      .from("state_history")
-      .select("*")
-      .eq("entidad_tipo", "cotizacion")
-      .eq("entidad_id", id)
-      .order("created_at", { ascending: false }),
-
-    supabase
       .from("activities")
       .select(
         `
@@ -254,7 +246,6 @@ export async function getQuote(id: string) {
 
   if (quoteResult.error) throw new Error(quoteResult.error.message);
   if (itemsResult.error) throw new Error(itemsResult.error.message);
-  if (historyResult.error) throw new Error(historyResult.error.message);
   if (activitiesResult.error) throw new Error(activitiesResult.error.message);
   if (tasksResult.error) throw new Error(tasksResult.error.message);
   if (activityResultsResult.error) {
@@ -318,7 +309,7 @@ export async function getQuote(id: string) {
   return {
     ...quote,
     quote_items: itemsResult.data ?? [],
-    state_history: historyResult.data ?? [],
+    state_history: [],
     activities: activitiesResult.data ?? [],
     tasks,
     pending_tasks: pendingTasks,
