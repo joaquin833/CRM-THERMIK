@@ -125,7 +125,9 @@ export async function getQuote(id: string) {
           telefono,
           whatsapp,
           correo,
-          preferencia_contacto
+          preferencia_contacto,
+          tipo_contacto,
+          estado
         ),
         empresas (
           id,
@@ -183,10 +185,12 @@ export async function getQuote(id: string) {
       .eq("cotizacion_id", id)
       .order("posicion", { ascending: true }),
 
-    Promise.resolve({
-      data: [] as Record<string, unknown>[],
-      error: null,
-    }),
+    supabase
+      .from("state_history")
+      .select("*")
+      .eq("entidad_tipo", "cotizacion")
+      .eq("entidad_id", id)
+      .order("created_at", { ascending: false }),
 
     supabase
       .from("activities")
@@ -250,6 +254,7 @@ export async function getQuote(id: string) {
 
   if (quoteResult.error) throw new Error(quoteResult.error.message);
   if (itemsResult.error) throw new Error(itemsResult.error.message);
+  if (historyResult.error) throw new Error(historyResult.error.message);
   if (activitiesResult.error) throw new Error(activitiesResult.error.message);
   if (tasksResult.error) throw new Error(tasksResult.error.message);
   if (activityResultsResult.error) {

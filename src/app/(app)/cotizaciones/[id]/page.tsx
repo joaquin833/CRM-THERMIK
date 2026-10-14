@@ -5,6 +5,7 @@ import { QuoteNumberBadge, StatusBadge } from "@/components/brand";
 import { InitialQuoteFollowUpForm } from "@/components/initial-quote-followup-form";
 import { QuoteCommercialActions } from "@/components/quote-commercial-actions";
 import { QuoteCommercialTimeline } from "@/components/quote-commercial-timeline";
+import { QuoteContactCard } from "@/components/quote-contact-card";
 import { QuoteFollowUpForm } from "@/components/quote-followup-form";
 import { QuotePdfLink } from "@/components/quote-pdf-link";
 import { clp } from "@/lib/money";
@@ -132,6 +133,11 @@ export default async function Page({ params }: PageProps) {
           value={formatDateTime(quote.fecha_proximo_seguimiento)}
         />
       </section>
+
+      <QuoteContactCard
+        contact={contact as Parameters<typeof QuoteContactCard>[0]["contact"]}
+        companyName={cleanText(company?.razon_social)}
+      />
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="grid content-start gap-6">
