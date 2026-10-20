@@ -5,6 +5,7 @@ import { QuoteNumberBadge, StatusBadge } from "@/components/brand";
 import { InitialQuoteFollowUpForm } from "@/components/initial-quote-followup-form";
 import { QuoteCommercialActions } from "@/components/quote-commercial-actions";
 import { QuoteCommercialTimeline } from "@/components/quote-commercial-timeline";
+import { QuoteCompanyLinkForm } from "@/components/quote-company-link-form";
 import { QuoteContactCard } from "@/components/quote-contact-card";
 import { QuoteFollowUpForm } from "@/components/quote-followup-form";
 import { QuotePdfLink } from "@/components/quote-pdf-link";
@@ -139,6 +140,8 @@ export default async function Page({ params }: PageProps) {
         companyName={cleanText(company?.razon_social)}
         quoteId={quote.id}
       />
+
+      <QuoteCompanyLinkForm quoteId={quote.id} />
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="grid content-start gap-6">
