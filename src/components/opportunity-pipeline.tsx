@@ -78,8 +78,8 @@ export function OpportunityPipeline({ opportunities, catalogs }: Props) {
 
   return (
     <>
-      <section className="mt-6 overflow-x-auto pb-4">
-        <div className="grid min-w-[1680px] grid-cols-6 gap-4">
+      <section className="mt-6 overflow-x-auto pb-5 [scrollbar-color:rgb(148_163_184)_transparent] [scrollbar-width:thin]">
+        <div className="grid grid-flow-col auto-cols-[minmax(310px,330px)] gap-4">
           {openStages.map((stage) => {
             const items = opportunities.filter(
               (opportunity) => opportunity.etapa_comercial === stage.value,
@@ -244,8 +244,8 @@ function PipelineColumn({
   );
 
   return (
-    <section className="rounded-2xl border bg-slate-100/80 p-3">
-      <div className="flex items-start justify-between gap-3 px-1 pb-3">
+    <section className="min-w-[310px] rounded-2xl border bg-slate-100/80 p-3">
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-3 rounded-xl bg-slate-100/95 px-1 pb-3 pt-1 backdrop-blur">
         <div>
           <h2 className="font-semibold text-slate-950">{stage}</h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -301,11 +301,11 @@ function OpportunityCard({
     <article className="rounded-xl border bg-white p-4 shadow-sm">
       <Link
         href={`/oportunidades/${opportunity.id}`}
-        className="font-semibold text-slate-950 hover:text-emerald-700"
+        className="line-clamp-2 min-h-12 font-semibold leading-6 text-slate-950 hover:text-emerald-700"
       >
         {opportunity.nombre}
       </Link>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 line-clamp-2 min-h-8 text-xs leading-4 text-slate-500">
         {text(project?.nombre) || "Sin proyecto"}
       </p>
       <p className="mt-3 text-lg font-bold text-slate-950">{money(amount)}</p>
@@ -330,7 +330,7 @@ function OpportunityCard({
         <p className="mt-1">{dateTime(opportunity.fecha_proxima_accion)}</p>
       </div>
 
-      <p className="mt-3 truncate text-xs text-slate-500">
+      <p className="mt-3 line-clamp-2 min-h-8 text-xs leading-4 text-slate-500">
         {text(company?.razon_social) ||
           [text(contact?.nombre), text(contact?.apellido)]
             .filter(Boolean)
