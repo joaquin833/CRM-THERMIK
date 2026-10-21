@@ -60,19 +60,47 @@ language plpgsql
 security invoker
 set search_path = public
 as $$
-declare
-  v_old_stage text;
 begin
-  if tg_op = 'UPDATE' then
-    v_old_stage := old.etapa_comercial;
-  end if;
-
   new.nombre := nullif(trim(new.nombre), '');
   new.nombre_normalizado := public.normalize_opportunity_text(new.nombre);
-  new.etapa_comercial := nullif(trim(new.etapa_comercial), '');
-  new.estado := nullif(trim(new.estado), '');
-  new.prioridad := nullif(trim(new.prioridad), '');
-  new.temperatura := nullif(trim(new.temperatura), '');
+  new.etapa_comercial := case public.normalize_opportunity_text(new.etapa_comercial)
+    when 'cotizacionemitida' then 'Cotización emitida'
+    when 'cotizacionenviada' then 'Cotización enviada'
+    when 'recibidaporelcliente' then 'Recibida por el cliente'
+    when 'enevaluacion' then 'En evaluación'
+    when 'negociacion' then 'Negociación'
+    when 'postergada' then 'Postergada'
+    when 'aprobada' then 'Aprobada'
+    when 'ganada' then 'Aprobada'
+    when 'perdida' then 'Perdida'
+    when 'cancelada' then 'Cancelada'
+    else nullif(trim(new.etapa_comercial), '')
+  end;
+  new.estado := case lower(trim(coalesce(new.estado, '')))
+    when 'abierta' then 'abierta'
+    when 'activo' then 'abierta'
+    when 'ganada' then 'ganada'
+    when 'aprobada' then 'ganada'
+    when 'perdida' then 'perdida'
+    when 'postergada' then 'postergada'
+    when 'cancelada' then 'cancelada'
+    else nullif(lower(trim(new.estado)), '')
+  end;
+  new.prioridad := case lower(trim(coalesce(new.prioridad, '')))
+    when 'baja' then 'Baja'
+    when 'media' then 'Media'
+    when 'alta' then 'Alta'
+    when 'critica' then 'Crítica'
+    when 'crítica' then 'Crítica'
+    else nullif(trim(new.prioridad), '')
+  end;
+  new.temperatura := case lower(trim(coalesce(new.temperatura, '')))
+    when 'fria' then 'Fría'
+    when 'fría' then 'Fría'
+    when 'tibia' then 'Tibia'
+    when 'caliente' then 'Caliente'
+    else nullif(trim(new.temperatura), '')
+  end;
   new.proxima_accion := nullif(trim(new.proxima_accion), '');
   new.observaciones := nullif(trim(new.observaciones), '');
   new.updated_at := now();
@@ -141,8 +169,7 @@ begin
     raise exception 'Temperatura no válida.';
   end if;
 
-  if new.probabilidad_cierre is null
-     or (tg_op = 'UPDATE' and new.etapa_comercial is distinct from v_old_stage) then
+  if new.probabilidad_cierre is null then
     new.probabilidad_cierre := public.opportunity_stage_probability(
       new.etapa_comercial
     );
