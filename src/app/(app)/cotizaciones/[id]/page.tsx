@@ -9,6 +9,7 @@ import { QuoteCompanyLinkForm } from "@/components/quote-company-link-form";
 import { QuoteContactCard } from "@/components/quote-contact-card";
 import { QuoteFollowUpForm } from "@/components/quote-followup-form";
 import { QuotePdfLink } from "@/components/quote-pdf-link";
+import { QuoteProjectCard } from "@/components/quote-project-card";
 import { clp } from "@/lib/money";
 import { getQuote } from "@/lib/services/quotes";
 
@@ -142,6 +143,8 @@ export default async function Page({ params }: PageProps) {
       />
 
       <QuoteCompanyLinkForm quoteId={quote.id} />
+
+      <QuoteProjectCard quoteId={quote.id} project={project} />
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="grid content-start gap-6">

@@ -11,9 +11,15 @@ type Props = {
   data: Project360;
   contacts: Option[];
   companies: Option[];
+  returnTo?: string;
 };
 
-export function ProjectEditForm({ data, contacts, companies }: Props) {
+export function ProjectEditForm({
+  data,
+  contacts,
+  companies,
+  returnTo,
+}: Props) {
   const router = useRouter();
   const project = data.project;
   const catalogs: ProjectCatalogs = data.catalogs;
@@ -53,7 +59,7 @@ export function ProjectEditForm({ data, contacts, companies }: Props) {
       const result = await response.json().catch(() => ({}));
       if (!response.ok)
         throw new Error(result.error || "No fue posible guardar el proyecto.");
-      router.push(`/proyectos/${project.id}`);
+      router.push(returnTo || `/proyectos/${project.id}`);
       router.refresh();
     } catch (reason) {
       setError(
@@ -165,7 +171,7 @@ export function ProjectEditForm({ data, contacts, companies }: Props) {
       <div className="flex flex-wrap justify-end gap-3">
         <button
           type="button"
-          onClick={() => router.push(`/proyectos/${project.id}`)}
+          onClick={() => router.push(returnTo || `/proyectos/${project.id}`)}
           className="rounded-lg border px-4 py-2 font-semibold text-slate-700"
         >
           Cancelar

@@ -5,10 +5,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { params: Promise<{ id: string }> };
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
+};
 
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { returnTo: requestedReturnTo } = await searchParams;
+  const returnTo = safeReturnTo(requestedReturnTo, `/proyectos/${id}`);
   const [data, options] = await Promise.all([getProject360(id), getOptions()]);
 
   return (
@@ -28,6 +33,7 @@ export default async function Page({ params }: PageProps) {
         data={data}
         contacts={options.contacts}
         companies={options.companies}
+        returnTo={returnTo}
       />
     </AppShell>
   );
@@ -66,4 +72,12 @@ async function getOptions() {
         : item.razon_social,
     })),
   };
+}
+
+function safeReturnTo(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  if (value.startsWith("/cotizaciones/") || value.startsWith("/proyectos/")) {
+    return value;
+  }
+  return fallback;
 }
