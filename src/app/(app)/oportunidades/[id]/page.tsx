@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { getOpportunity360 } from "@/lib/services/opportunities";
+import { OpportunityOutcomeSection } from "@/components/opportunity-outcome-section";
 
 export const dynamic = "force-dynamic";
 
@@ -30,22 +31,20 @@ export default async function Page({ params }: PageProps) {
               "Sin relación principal"}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge>{opportunity.etapa_comercial}</Badge>
-          <Badge>{opportunity.estado}</Badge>
-          <Link
-            href={`/oportunidades/${opportunity.id}/editar`}
-            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-          >
-            Editar oportunidad
-          </Link>
-          <Link
-            href="/oportunidades"
-            className="rounded-lg border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Volver al pipeline
-          </Link>
-        </div>
+     <div className="flex flex-wrap gap-2">
+  <Badge>{opportunity.etapa_comercial}</Badge>
+  <Badge>{opportunity.estado}</Badge>
+
+  <OpportunityOutcomeSection opportunity={opportunity} />
+
+  {`/oportunidades/${opportunity.id}/editar`}
+    Editar oportunidad
+  </Link>
+
+  /oportunidades
+    Volver al pipeline
+  </Link>
+</div>
       </header>
 
       {opportunity.seguimiento_atrasado && (
