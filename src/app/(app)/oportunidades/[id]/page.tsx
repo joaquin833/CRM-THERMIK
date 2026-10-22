@@ -34,6 +34,12 @@ export default async function Page({ params }: PageProps) {
           <Badge>{opportunity.etapa_comercial}</Badge>
           <Badge>{opportunity.estado}</Badge>
           <Link
+            href={`/oportunidades/${opportunity.id}/editar`}
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            Editar oportunidad
+          </Link>
+          <Link
             href="/oportunidades"
             className="rounded-lg border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
