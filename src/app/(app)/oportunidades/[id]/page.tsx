@@ -2,12 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { getOpportunity360 } from "@/lib/services/opportunities";
 import { OpportunityOutcomeSection } from "@/components/opportunity-outcome-section";
+import { getOpportunity360 } from "@/lib/services/opportunities";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { params: Promise<{ id: string }> };
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
 
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
@@ -31,20 +33,27 @@ export default async function Page({ params }: PageProps) {
               "Sin relación principal"}
           </p>
         </div>
-     <div className="flex flex-wrap gap-2">
-  <Badge>{opportunity.etapa_comercial}</Badge>
-  <Badge>{opportunity.estado}</Badge>
 
-  <OpportunityOutcomeSection opportunity={opportunity} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge>{opportunity.etapa_comercial}</Badge>
+          <Badge>{opportunity.estado}</Badge>
 
-  {`/oportunidades/${opportunity.id}/editar`}
-    Editar oportunidad
-  </Link>
+          <OpportunityOutcomeSection opportunity={opportunity} />
 
-  /oportunidades
-    Volver al pipeline
-  </Link>
-</div>
+          <Link
+            href={`/oportunidades/${opportunity.id}/editar`}
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            Editar oportunidad
+          </Link>
+
+          <Link
+            href="/oportunidades"
+            className="rounded-lg border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Volver al pipeline
+          </Link>
+        </div>
       </header>
 
       {opportunity.seguimiento_atrasado && (
@@ -101,6 +110,7 @@ export default async function Page({ params }: PageProps) {
             href={contact ? `/contactos/${contact.id}` : undefined}
           />
           <Definition label="Teléfono" value={contact?.telefono} />
+          <Definition label="WhatsApp" value={contact?.whatsapp} />
           <Definition label="Correo" value={contact?.correo} />
           <Definition
             label="Empresa"
@@ -216,21 +226,32 @@ export default async function Page({ params }: PageProps) {
               <Definition
                 label="Resultado"
                 value={stringValue(
-                  closure.resultado ?? closure.estado ?? closure.tipo_cierre,
+                  closure.resultado ??
+                    closure.estado ??
+                    closure.tipo_cierre ??
+                    closure.outcome_type,
                 )}
               />
               <Definition
                 label="Fecha"
                 value={formatDateTime(
-                  stringValue(closure.fecha_cierre ?? closure.created_at),
+                  stringValue(
+                    closure.fecha_cierre ??
+                      closure.effective_at ??
+                      closure.created_at,
+                  ),
                 )}
               />
               <Definition
                 label="Monto"
                 value={
-                  closure.monto_cierre == null
+                  closure.monto_cierre == null && closure.closed_amount == null
                     ? null
-                    : money(numberValue(closure.monto_cierre))
+                    : money(
+                        numberValue(
+                          closure.monto_cierre ?? closure.closed_amount,
+                        ),
+                      )
                 }
               />
             </div>
@@ -252,11 +273,15 @@ function Metric({
 }) {
   return (
     <article
-      className={`rounded-2xl border p-4 shadow-sm ${danger ? "border-red-200 bg-red-50" : "bg-white"}`}
+      className={`rounded-2xl border p-4 shadow-sm ${
+        danger ? "border-red-200 bg-red-50" : "bg-white"
+      }`}
     >
       <p className="text-sm text-slate-500">{label}</p>
       <p
-        className={`mt-1 text-2xl font-bold ${danger ? "text-red-800" : "text-slate-950"}`}
+        className={`mt-1 text-2xl font-bold ${
+          danger ? "text-red-800" : "text-slate-950"
+        }`}
       >
         {value}
       </p>
@@ -312,7 +337,9 @@ function RelationSection({
 }) {
   return (
     <section
-      className={`${compact ? "" : "mt-6"} rounded-2xl border bg-white p-5 shadow-sm`}
+      className={`${
+        compact ? "" : "mt-6"
+      } rounded-2xl border bg-white p-5 shadow-sm`}
     >
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
