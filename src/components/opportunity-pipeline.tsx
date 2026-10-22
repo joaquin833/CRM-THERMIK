@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   OpportunityCatalogs,
@@ -23,6 +23,10 @@ export function OpportunityPipeline({ opportunities, catalogs }: Props) {
   const [editing, setEditing] = useState<OpportunityListItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const pipelineScrollRef = useRef<HTMLDivElement>(null);
+  const [pipelineWidth, setPipelineWidth] = useState(0);
+  const syncingScroll = useRef(false);
 
   const orderedStages = useMemo(
     () => [...catalogs.etapas].sort((a, b) => a.order - b.order),
@@ -34,6 +38,45 @@ export function OpportunityPipeline({ opportunities, catalogs }: Props) {
   const closedStages = orderedStages.filter((stage) =>
     CLOSED_STAGES.has(stage.value),
   );
+
+  useEffect(() => {
+    const pipeline = pipelineScrollRef.current;
+    if (!pipeline) return;
+
+    const updateWidth = () => setPipelineWidth(pipeline.scrollWidth);
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(pipeline);
+    const content = pipeline.firstElementChild;
+    if (content) observer.observe(content);
+
+    return () => observer.disconnect();
+  }, [openStages.length, opportunities.length]);
+
+  function syncFromTop() {
+    if (syncingScroll.current) return;
+    const top = topScrollRef.current;
+    const pipeline = pipelineScrollRef.current;
+    if (!top || !pipeline) return;
+    syncingScroll.current = true;
+    pipeline.scrollLeft = top.scrollLeft;
+    requestAnimationFrame(() => {
+      syncingScroll.current = false;
+    });
+  }
+
+  function syncFromPipeline() {
+    if (syncingScroll.current) return;
+    const top = topScrollRef.current;
+    const pipeline = pipelineScrollRef.current;
+    if (!top || !pipeline) return;
+    syncingScroll.current = true;
+    top.scrollLeft = pipeline.scrollLeft;
+    requestAnimationFrame(() => {
+      syncingScroll.current = false;
+    });
+  }
 
   async function changeStage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,7 +121,20 @@ export function OpportunityPipeline({ opportunities, catalogs }: Props) {
 
   return (
     <>
-      <section className="mt-6 overflow-x-auto pb-5 [scrollbar-color:rgb(148_163_184)_transparent] [scrollbar-width:thin]">
+      <div
+        ref={topScrollRef}
+        onScroll={syncFromTop}
+        className="mt-6 overflow-x-auto pb-2 [scrollbar-color:rgb(100_116_139)_transparent] [scrollbar-width:auto]"
+        aria-label="Desplazamiento horizontal del pipeline"
+      >
+        <div style={{ width: pipelineWidth, height: 1 }} />
+      </div>
+
+      <section
+        ref={pipelineScrollRef}
+        onScroll={syncFromPipeline}
+        className="overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <div className="grid grid-flow-col auto-cols-[minmax(310px,330px)] gap-4">
           {openStages.map((stage) => {
             const items = opportunities.filter(
@@ -439,4 +495,3 @@ function dateTimeInput(value?: string | null): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
 }
-// Pipeline visual amplio
