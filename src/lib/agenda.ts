@@ -236,7 +236,7 @@ export async function getAgendaTask(id: string): Promise<AgendaTask> {
 }
 
 export async function createAgendaTask(input: CreateTaskInput): Promise<AgendaTask> {
-  const { data, error } = await getSupabase().from("tasks").insert(normalizeCreate(input)).select("*").single();
+  const { data, error } = await getSupabase().from("tasks").insert(normalizeCreate(input) as never).select("*").single();
   if (error) throw formatError("crear la actividad", error);
   return data as AgendaTask;
 }
@@ -245,7 +245,7 @@ export async function updateAgendaTask(id: string, input: UpdateTaskInput): Prom
   if (!id) throw new Error("Agenda: falta el identificador.");
   const payload = normalizeUpdate(input);
   if (!Object.keys(payload).length) return getAgendaTask(id);
-  const { data, error } = await getSupabase().from("tasks").update(payload).eq("id", id).select("*").single();
+  const { data, error } = await getSupabase().from("tasks").update(payload as never).eq("id", id).select("*").single();
   if (error) throw formatError("actualizar la actividad", error);
   return data as AgendaTask;
 }

@@ -1,8 +1,20 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient as createSupabaseClient,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
-let browserClient: ReturnType<typeof createSupabaseClient> | undefined;
+/**
+ * Cliente de Supabase para el navegador.
+ *
+ * El tipo flexible es intencional mientras el proyecto no tenga generado
+ * src/types/database.ts. Evita que tablas nuevas como public.tasks sean
+ * inferidas por TypeScript como `never`.
+ */
+type AppSupabaseClient = SupabaseClient<any, "public", any>;
 
-export function createClient() {
+let browserClient: AppSupabaseClient | undefined;
+
+export function createClient(): AppSupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -13,13 +25,17 @@ export function createClient() {
   }
 
   if (!browserClient) {
-    browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
+    browserClient = createSupabaseClient<any, "public", any>(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
       },
-    });
+    );
   }
 
   return browserClient;
