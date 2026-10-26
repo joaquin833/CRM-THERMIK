@@ -21,23 +21,26 @@ const control = "focus-ring w-full rounded-lg border border-[rgb(var(--border))]
 
 type Props = { task: AgendaTask | null; onClose: () => void; onUpdated: (task: AgendaTask) => void; onDeleted: (id: string) => void };
 type State = { title: string; description: string; task_type: TaskType; status: TaskStatus; priority: TaskPriority; start_at: string; due_at: string; reminder_at: string; all_day: boolean; notes: string };
+const EMPTY: State = { title: "", description: "", task_type: "follow_up", status: "pending", priority: "medium", start_at: "", due_at: "", reminder_at: "", all_day: false, notes: "" };
 
 export default function AgendaTaskDetail({ task, onClose, onUpdated, onDeleted }: Props) {
-  const [form, setForm] = useState<State | null>(null);
+  const [form, setForm] = useState<State>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (!task) return setForm(null);
+    if (!task) { setForm(EMPTY); return; }
     setForm({ title: task.title, description: task.description ?? "", task_type: task.task_type, status: task.status, priority: task.priority, start_at: local(task.start_at), due_at: local(task.due_at), reminder_at: local(task.reminder_at), all_day: task.all_day, notes: task.notes ?? "" });
     setError(""); setConfirmDelete(false);
   }, [task]);
 
-  if (!task || !form) return null;
+  if (!task) return null;
 
   async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError("");
+    event.preventDefault();
+    setError("");
+    if (!task) return;
     if (!form.title.trim()) return setError("El título es obligatorio.");
     if (form.start_at && form.due_at && new Date(form.due_at) < new Date(form.start_at)) return setError("El vencimiento no puede ser anterior al inicio.");
     setSaving(true);
@@ -49,6 +52,7 @@ export default function AgendaTaskDetail({ task, onClose, onUpdated, onDeleted }
   }
 
   async function cancelTask() {
+    if (!task) return;
     setSaving(true); setError("");
     try { const updated = await cancelAgendaTask(task.id); onUpdated(updated); onClose(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible cancelar la actividad."); }
@@ -56,6 +60,7 @@ export default function AgendaTaskDetail({ task, onClose, onUpdated, onDeleted }
   }
 
   async function remove() {
+    if (!task) return;
     setSaving(true); setError("");
     try { await deleteAgendaTask(task.id); onDeleted(task.id); onClose(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible eliminar la actividad."); }
