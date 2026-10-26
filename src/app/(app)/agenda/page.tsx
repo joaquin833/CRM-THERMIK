@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
+import AgendaTaskDetail from "@/components/agenda/agenda-task-detail";
 import {
   completeAgendaTask, createAgendaTask, listAgendaTasks, reopenAgendaTask,
   TASK_PRIORITIES, TASK_TYPES,
@@ -28,6 +29,7 @@ export default function AgendaPage() {
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<AgendaTask | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
 
   const load = useCallback(async (manual = false) => {
@@ -122,8 +124,10 @@ export default function AgendaPage() {
     {error && <div role="alert" className="mt-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">{error}</div>}
 
     <section className="mt-6 overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-white shadow-sm">
-      {loading ? <p className="p-10 text-center text-sm text-slate-500">Cargando agenda comercial...</p> : shown.length === 0 ? <div className="p-10 text-center"><h2 className="font-semibold text-slate-950">Sin actividades</h2><p className="mt-1 text-sm text-slate-500">{tasks.length ? "No hay resultados para los filtros seleccionados." : "Crea la primera actividad para comenzar el seguimiento comercial."}</p>{!tasks.length && <button type="button" onClick={() => setModal(true)} className="focus-ring mt-4 rounded-lg bg-[rgb(var(--brand-primary-dark))] px-4 py-2 text-sm font-semibold text-white">Crear primera actividad</button>}</div> : <div className="divide-y divide-[rgb(var(--border))]">{shown.map(task => <Task key={task.id} task={task} busy={processing === task.id} onToggle={toggle}/>)}</div>}
+      {loading ? <p className="p-10 text-center text-sm text-slate-500">Cargando agenda comercial...</p> : shown.length === 0 ? <div className="p-10 text-center"><h2 className="font-semibold text-slate-950">Sin actividades</h2><p className="mt-1 text-sm text-slate-500">{tasks.length ? "No hay resultados para los filtros seleccionados." : "Crea la primera actividad para comenzar el seguimiento comercial."}</p>{!tasks.length && <button type="button" onClick={() => setModal(true)} className="focus-ring mt-4 rounded-lg bg-[rgb(var(--brand-primary-dark))] px-4 py-2 text-sm font-semibold text-white">Crear primera actividad</button>}</div> : <div className="divide-y divide-[rgb(var(--border))]">{shown.map(task => <Task key={task.id} task={task} busy={processing === task.id} onToggle={toggle} onOpen={setSelectedTask}/>)}</div>}
     </section>
+
+    <AgendaTaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} onUpdated={updated => { setTasks(current => current.map(item => item.id === updated.id ? {...item,...updated} : item)); setSelectedTask(null); }} onDeleted={id => { setTasks(current => current.filter(item => item.id !== id)); setSelectedTask(null); }}/>
 
     {modal && <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="new-task-title" onMouseDown={e => { if (e.target === e.currentTarget && !saving) setModal(false); }}>
       <form onSubmit={submit} className="my-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
@@ -146,7 +150,7 @@ export default function AgendaPage() {
 }
 
 function Metric({label,value,alert=false}:{label:string;value:number;alert?:boolean}) { const active=alert&&value>0; return <article className={`rounded-2xl border bg-white p-4 shadow-sm ${active?"border-red-200":"border-[rgb(var(--border))]"}`}><p className="text-sm text-slate-500">{label}</p><p className={`mt-1 text-2xl font-bold ${active?"text-red-700":"text-slate-950"}`}>{value}</p></article>; }
-function Task({task,busy,onToggle}:{task:AgendaTask;busy:boolean;onToggle:(task:AgendaTask)=>void}) { const late=overdue(task); return <article className="flex flex-col gap-4 p-4 transition hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold text-slate-950">{task.title}</h2>{late&&<Badge cls="bg-red-100 text-red-800">Vencida</Badge>}<Status status={task.status}/><Priority priority={task.priority}/></div><p className="mt-2 text-sm text-slate-600">{TYPES[task.task_type]} · {date(task.due_at)}</p>{task.description&&<p className="mt-1 line-clamp-2 text-sm text-slate-500">{task.description}</p>}</div><button type="button" disabled={busy||task.status==="cancelled"} onClick={()=>onToggle(task)} className="focus-ring shrink-0 rounded-lg border border-[rgb(var(--border))] bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">{busy?"Guardando...":task.status==="completed"?"Reabrir":"Completar"}</button></article>; }
+function Task({task,busy,onToggle,onOpen}:{task:AgendaTask;busy:boolean;onToggle:(task:AgendaTask)=>void;onOpen:(task:AgendaTask)=>void}) { const late=overdue(task); return <article className="flex flex-col gap-4 p-4 transition hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold text-slate-950">{task.title}</h2>{late&&<Badge cls="bg-red-100 text-red-800">Vencida</Badge>}<Status status={task.status}/><Priority priority={task.priority}/></div><p className="mt-2 text-sm text-slate-600">{TYPES[task.task_type]} · {date(task.due_at)}</p>{task.description&&<p className="mt-1 line-clamp-2 text-sm text-slate-500">{task.description}</p>}</div><div className="flex shrink-0 gap-2"><button type="button" onClick={()=>onOpen(task)} className="focus-ring rounded-lg border border-[rgb(var(--border))] bg-white px-3 py-2 text-sm font-semibold text-slate-700">Ver detalle</button><button type="button" disabled={busy||task.status==="cancelled"} onClick={()=>onToggle(task)} className="focus-ring shrink-0 rounded-lg border border-[rgb(var(--border))] bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">{busy?"Guardando...":task.status==="completed"?"Reabrir":"Completar"}</button></div></article>; }
 function Status({status}:{status:TaskStatus}) { const styles:Record<TaskStatus,string>={pending:"bg-amber-100 text-amber-800",in_progress:"bg-blue-100 text-blue-800",completed:"bg-emerald-100 text-emerald-800",cancelled:"bg-slate-100 text-slate-600"}; return <Badge cls={styles[status]}>{STATUS[status]}</Badge>; }
 function Priority({priority}:{priority:TaskPriority}) { const styles:Record<TaskPriority,string>={low:"bg-slate-100 text-slate-600",medium:"bg-[rgb(var(--brand-primary-light))] text-[rgb(var(--brand-primary-dark))]",high:"bg-amber-100 text-amber-800",urgent:"bg-red-100 text-red-800"}; return <Badge cls={styles[priority]}>{PRIORITIES[priority]}</Badge>; }
 function Badge({cls,children}:{cls:string;children:ReactNode}) { return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}>{children}</span>; }
