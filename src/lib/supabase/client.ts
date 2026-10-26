@@ -1,14 +1,14 @@
-import {
-  createClient as createSupabaseClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Cliente de Supabase para el navegador.
+ * Cliente Supabase para componentes del navegador.
  *
- * El tipo flexible es intencional mientras el proyecto no tenga generado
- * src/types/database.ts. Evita que tablas nuevas como public.tasks sean
- * inferidas por TypeScript como `never`.
+ * Usa @supabase/ssr para compartir la misma sesion basada en cookies que
+ * src/lib/supabase/server.ts. Esto permite que RLS reconozca al usuario y a
+ * la organizacion activa del CRM Thermikhaus.
+ *
+ * El tipado flexible se mantiene temporalmente hasta regenerar Database.
  */
 type AppSupabaseClient = SupabaseClient<any, "public", any>;
 
@@ -20,22 +20,15 @@ export function createClient(): AppSupabaseClient {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      "Faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY en las variables de entorno.",
+      "Faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY.",
     );
   }
 
   if (!browserClient) {
-    browserClient = createSupabaseClient<any, "public", any>(
+    browserClient = createBrowserClient<any>(
       supabaseUrl,
       supabaseAnonKey,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-        },
-      },
-    );
+    ) as AppSupabaseClient;
   }
 
   return browserClient;
