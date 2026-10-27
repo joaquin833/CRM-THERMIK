@@ -1,0 +1,7 @@
+
+# Dependencias y archivos temporales locales
+node_modules/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+.next/
+.next/

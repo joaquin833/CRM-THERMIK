@@ -1,2 +1,68 @@
-import {NextResponse} from 'next/server';import {requireProfile} from '@/lib/auth/authorization';import {createClient} from '@/lib/supabase/server';import {syncTask} from '@/lib/google/calendar';
-export async function POST(){try{const p=await requireProfile(['admin','jefatura_comercial','ejecutivo_comercial']);const s=await createClient();const {data,error}=await s.from('tasks').select('id').eq('responsable_id',p.id).eq('estado','pendiente').not('fecha_hora_vencimiento','is',null).limit(100);if(error)throw error;let synced=0,failed=0;for(const task of data??[]){try{await syncTask(p.id,task.id);synced++}catch{failed++}}return NextResponse.json({synced,failed})}catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Error'},{status:400})}}
+import { NextResponse } from "next/server";
+
+import { requireProfile } from "@/lib/auth/authorization";
+import { syncTask } from "@/lib/google/calendar";
+import { createClient } from "@/lib/supabase/server";
+
+export async function POST() {
+  try {
+    const profile = await requireProfile([
+      "admin",
+      "jefatura_comercial",
+      "ejecutivo_comercial",
+    ]);
+
+    const supabase = await createClient();
+
+    const { data: tasks, error } = await supabase
+      .from("tasks")
+      .select("id")
+      .eq("assigned_to", profile.id)
+      .in("status", ["pending", "in_progress"])
+      .not("due_at", "is", null)
+      .order("due_at", { ascending: true })
+      .limit(100);
+
+    if (error) {
+      throw error;
+    }
+
+    let synced = 0;
+    let failed = 0;
+    const errors: Array<{ taskId: string; error: string }> = [];
+
+    for (const task of tasks ?? []) {
+      try {
+        await syncTask(profile.id, task.id);
+        synced += 1;
+      } catch (reason) {
+        failed += 1;
+
+        errors.push({
+          taskId: task.id,
+          error:
+            reason instanceof Error
+              ? reason.message
+              : "Error desconocido al sincronizar",
+        });
+      }
+    }
+
+    return NextResponse.json({
+      total: tasks?.length ?? 0,
+      synced,
+      failed,
+      errors,
+    });
+  } catch (reason) {
+    return NextResponse.json(
+      {
+        error:
+          reason instanceof Error
+            ? reason.message
+            : "Error al sincronizar Google Calendar",
+      },
+      { status: 400 },
+    );
+  }
+}
