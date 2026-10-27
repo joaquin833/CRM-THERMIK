@@ -40,7 +40,7 @@ export interface AgendaTask {
   status: TaskStatus;
   priority: TaskPriority;
   start_at: string | null;
-  due_at: string | null;
+  due_at: string;
   completed_at: string | null;
   all_day: boolean;
   assigned_to: string | null;
@@ -69,7 +69,7 @@ export interface CreateTaskInput {
   status?: TaskStatus;
   priority?: TaskPriority;
   start_at?: string | Date | null;
-  due_at?: string | Date | null;
+  due_at: string | Date;
   all_day?: boolean;
   assigned_to?: string | null;
   created_by?: string | null;
@@ -147,6 +147,9 @@ function asArray<T>(value: T | T[]) {
 function normalizeCreate(input: CreateTaskInput) {
   const title = input.title?.trim();
   if (!title) throw new Error("Agenda: el titulo es obligatorio.");
+  if (!input.due_at) {
+    throw new Error("Agenda: la fecha de vencimiento es obligatoria.");
+  }
   validateDates(input.start_at, input.due_at);
 
   return {
@@ -156,7 +159,7 @@ function normalizeCreate(input: CreateTaskInput) {
     status: input.status ?? "pending",
     priority: input.priority ?? "medium",
     start_at: toIso(input.start_at) ?? null,
-    due_at: toIso(input.due_at) ?? null,
+    due_at: toIso(input.due_at)!,
     all_day: input.all_day ?? false,
     assigned_to: input.assigned_to ?? null,
     created_by: input.created_by ?? null,
@@ -174,6 +177,9 @@ function normalizeCreate(input: CreateTaskInput) {
 function normalizeUpdate(input: UpdateTaskInput) {
   if (input.title !== undefined && !input.title.trim()) {
     throw new Error("Agenda: el titulo no puede quedar vacio.");
+  }
+  if (input.due_at === null) {
+    throw new Error("Agenda: la fecha de vencimiento no puede quedar vacia.");
   }
   validateDates(input.start_at, input.due_at);
 
@@ -194,6 +200,12 @@ function normalizeUpdate(input: UpdateTaskInput) {
   if (input.due_at !== undefined) payload.due_at = toIso(input.due_at);
   if (input.completed_at !== undefined) payload.completed_at = toIso(input.completed_at);
   if (input.reminder_at !== undefined) payload.reminder_at = toIso(input.reminder_at);
+  if (input.status !== undefined && input.status !== "completed") {
+    payload.completed_at = null;
+  }
+  if (input.status === "completed" && input.completed_at === undefined) {
+    payload.completed_at = new Date().toISOString();
+  }
   return payload;
 }
 
