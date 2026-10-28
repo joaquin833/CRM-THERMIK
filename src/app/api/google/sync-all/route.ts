@@ -13,6 +13,7 @@ export async function POST() {
     ]);
 
     const supabase = await createClient();
+    const now = new Date().toISOString();
 
     const { data: tasks, error } = await supabase
       .from("tasks")
@@ -20,6 +21,7 @@ export async function POST() {
       .eq("assigned_to", profile.id)
       .in("status", ["pending", "in_progress"])
       .not("due_at", "is", null)
+      .gte("due_at", now)
       .order("due_at", { ascending: true })
       .limit(100);
 
@@ -37,7 +39,6 @@ export async function POST() {
         synced += 1;
       } catch (reason) {
         failed += 1;
-
         errors.push({
           taskId: task.id,
           error:

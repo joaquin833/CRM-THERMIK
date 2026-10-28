@@ -94,6 +94,10 @@ function taskTypeLabel(taskType: string) {
     call: "Llamada",
     meeting: "Reunión",
     email: "Correo",
+
+    visit: "Visita",
+
+    quote_review: "Revisión de cotización",
     whatsapp: "WhatsApp",
     task: "Tarea",
     other: "Actividad",
