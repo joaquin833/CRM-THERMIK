@@ -14,6 +14,10 @@ import {
   type TaskStatus,
   type TaskType,
 } from "@/lib/agenda";
+import {
+  removeAgendaTaskFromCalendar,
+  syncAgendaTaskAutomatically,
+} from "@/lib/google/calendar-client";
 
 const STATUS: Record<TaskStatus, string> = { pending: "Pendiente", in_progress: "En curso", completed: "Completada", cancelled: "Cancelada" };
 const TYPES: Record<TaskType, string> = { follow_up: "Seguimiento", call: "Llamada", meeting: "ReuniÃ³n", email: "Correo", visit: "Visita", quote_review: "RevisiÃ³n de cotizaciÃ³n", other: "Otro" };
@@ -47,7 +51,13 @@ export default function AgendaTaskDetail({ contacts, task, onClose, onUpdated, o
     setSaving(true);
     try {
       const updated = await updateAgendaTask(task.id, { title: form.title.trim(), description: clean(form.description), task_type: form.task_type, status: form.status, priority: form.priority, start_at: iso(form.start_at), due_at: iso(form.due_at)!, reminder_at: iso(form.reminder_at), all_day: form.all_day, notes: clean(form.notes), contact_id: form.contact_id || null, completed_at: form.status === "completed" ? task.completed_at ?? new Date() : null });
-      onUpdated(updated); onClose();
+      onUpdated(updated);
+      if (updated.status === "cancelled") {
+        void removeAgendaTaskFromCalendar(updated.id);
+      } else {
+        void syncAgendaTaskAutomatically(updated);
+      }
+      onClose();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible guardar los cambios."); }
     finally { setSaving(false); }
   }
@@ -63,7 +73,7 @@ export default function AgendaTaskDetail({ contacts, task, onClose, onUpdated, o
   async function remove() {
     if (!task) return;
     setSaving(true); setError("");
-    try { await deleteAgendaTask(task.id); onDeleted(task.id); onClose(); }
+    try { await removeAgendaTaskFromCalendar(task.id); await deleteAgendaTask(task.id); onDeleted(task.id); onClose(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible eliminar la actividad."); }
     finally { setSaving(false); }
   }

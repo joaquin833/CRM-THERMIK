@@ -258,3 +258,53 @@ export async function syncTask(userId: string, taskId: string) {
     throw reason;
   }
 }
+
+
+export async function deleteTaskEvent(userId: string, taskId: string) {
+  const { api, connection, supabase } = await authorizedCalendar(userId);
+
+  const { data: task, error } = await supabase
+    .from("tasks")
+    .select("id,assigned_to,google_event_id,google_calendar_id")
+    .eq("id", taskId)
+    .eq("assigned_to", userId)
+    .single();
+
+  if (error || !task) {
+    throw new Error("Tarea no encontrada o no autorizada");
+  }
+
+  if (!task.google_event_id) {
+    return { deleted: false, reason: "not_synced" };
+  }
+
+  const calendarId = task.google_calendar_id || connection.calendar_id;
+
+  try {
+    await api.events.delete({ calendarId, eventId: task.google_event_id });
+  } catch (reason) {
+    const status =
+      reason && typeof reason === "object" && "code" in reason
+        ? Number((reason).code)
+        : null;
+
+    if (status !== 404 && status !== 410) throw reason;
+  }
+
+  const { error: updateError } = await supabase
+    .from("tasks")
+    .update({
+      sincronizado_google: false,
+      google_event_id: null,
+      google_calendar_id: null,
+      google_sync_status: "not_synced",
+      google_sync_error: null,
+      google_synced_at: new Date().toISOString(),
+    })
+    .eq("id", taskId)
+    .eq("assigned_to", userId);
+
+  if (updateError) throw updateError;
+
+  return { deleted: true };
+}

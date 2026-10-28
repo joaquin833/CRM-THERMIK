@@ -11,6 +11,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import AgendaTaskDetail from "@/components/agenda/agenda-task-detail";
+import { syncAgendaTaskAutomatically } from "@/lib/google/calendar-client";
 import {
   completeAgendaTask,
   createAgendaTask,
@@ -183,6 +184,7 @@ export default function AgendaPage() {
           item.id === updated.id ? { ...item, ...updated } : item,
         ),
       );
+      void syncAgendaTaskAutomatically(updated);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -232,6 +234,7 @@ export default function AgendaPage() {
     try {
       const created = await createAgendaTask(input);
       setTasks((current) => [created, ...current]);
+      void syncAgendaTaskAutomatically(created);
       setForm(EMPTY);
       setModal(false);
     } catch (reason) {
