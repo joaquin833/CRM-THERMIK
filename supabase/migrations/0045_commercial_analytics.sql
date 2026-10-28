@@ -2,7 +2,7 @@
 -- 0045_commercial_analytics.sql
 -- CRM Thermikhaus | Bloque E | Fuente analitica para Dashboard y Reportes
 -- Fecha: 2026-10-28
--- Revision 2: verificacion compatible con Supabase SQL Editor
+-- Revision 3: corrige total agrupado del pipeline y mantiene verificacion compatible con SQL Editor
 --
 -- Crea una unica funcion JSON para:
 --   - indicadores principales y comparacion con periodo anterior
@@ -203,7 +203,7 @@ begin
           * greatest(least(coalesce(probabilidad_cierre, 0), 100), 0)
           / 100.0
         ), 0)::numeric as weighted_amount,
-        sum(coalesce(monto_estimado, 0)) over ()::numeric as total_amount,
+        sum(sum(coalesce(monto_estimado, 0))) over ()::numeric as total_amount,
         case lower(etapa_comercial)
           when 'prospección' then 10
           when 'calificación' then 20
