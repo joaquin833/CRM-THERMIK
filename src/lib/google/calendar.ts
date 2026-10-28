@@ -94,9 +94,7 @@ function taskTypeLabel(taskType: string) {
     call: "Llamada",
     meeting: "Reunión",
     email: "Correo",
-
     visit: "Visita",
-
     quote_review: "Revisión de cotización",
     whatsapp: "WhatsApp",
     task: "Tarea",
@@ -104,6 +102,16 @@ function taskTypeLabel(taskType: string) {
   };
 
   return labels[taskType] ?? taskType;
+}
+
+function eventSummary(task: CalendarTask) {
+  const contact = task.contactos?.[0];
+  const contactName = contact
+    ? `${contact.nombre} ${contact.apellido ?? ""}`.trim()
+    : null;
+  const mainTitle = `[${taskTypeLabel(task.task_type)}] ${task.title.trim()}`;
+
+  return contactName ? `${mainTitle} | ${contactName}` : mainTitle;
 }
 
 export function eventFromTask(task: CalendarTask, appUrl: string) {
@@ -116,23 +124,21 @@ export function eventFromTask(task: CalendarTask, appUrl: string) {
   }
 
   const end = new Date(start.getTime() + DEFAULT_EVENT_MINUTES * 60_000);
-  const quoteTitle = quote
-    ? `Cotización N.º ${quote.numero_cotizacion}`
-    : "Seguimiento comercial";
   const contactName = contact
     ? `${contact.nombre} ${contact.apellido ?? ""}`.trim()
-    : "Cliente";
+    : null;
 
   return {
-    summary: `${taskTypeLabel(task.task_type)} | ${quoteTitle} | ${contactName}`,
+    summary: eventSummary(task),
     description: [
-      task.title,
-      quoteTitle,
-      contact ? `Cliente: ${contactName}` : "",
+      `Actividad: ${task.title}`,
+      `Tipo: ${taskTypeLabel(task.task_type)}`,
+      quote ? `Cotización: ${quote.numero_cotizacion}` : "",
+      contactName ? `Contacto: ${contactName}` : "",
       contact?.telefono ? `Teléfono: ${contact.telefono}` : "",
       contact?.correo ? `Correo: ${contact.correo}` : "",
       task.description ? `Objetivo: ${task.description}` : "",
-      `${appUrl}/agenda`,
+      `Abrir en CRM: ${appUrl}/agenda`,
     ]
       .filter(Boolean)
       .join("\n"),
