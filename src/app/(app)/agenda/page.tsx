@@ -15,10 +15,12 @@ import {
   completeAgendaTask,
   createAgendaTask,
   listAgendaTasks,
+  listAgendaContacts,
   reopenAgendaTask,
   TASK_PRIORITIES,
   TASK_TYPES,
   type AgendaTask,
+  type AgendaContact,
   type CreateTaskInput,
   type TaskPriority,
   type TaskStatus,
@@ -62,6 +64,7 @@ type FormState = {
   reminder_at: string;
   all_day: boolean;
   notes: string;
+  contact_id: string;
 };
 
 const EMPTY: FormState = {
@@ -74,10 +77,12 @@ const EMPTY: FormState = {
   reminder_at: "",
   all_day: false,
   notes: "",
+  contact_id: "",
 };
 
 export default function AgendaPage() {
   const [tasks, setTasks] = useState<AgendaTask[]>([]);
+  const [contacts, setContacts] = useState<AgendaContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +101,12 @@ export default function AgendaPage() {
     setError(null);
 
     try {
-      setTasks((await listAgendaTasks({ limit: 500 })).data);
+      const [agendaResult, contactList] = await Promise.all([
+        listAgendaTasks({ limit: 500 }),
+        listAgendaContacts(),
+      ]);
+      setTasks(agendaResult.data);
+      setContacts(contactList);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -214,6 +224,7 @@ export default function AgendaPage() {
       reminder_at: iso(form.reminder_at),
       all_day: form.all_day,
       notes: text(form.notes),
+      contact_id: form.contact_id || null,
     };
 
     setSaving(true);
@@ -413,6 +424,7 @@ export default function AgendaPage() {
 
       <AgendaTaskDetail
         task={selectedTask}
+        contacts={contacts}
         onClose={() => setSelectedTask(null)}
         onUpdated={(updated) => {
           setTasks((current) =>
@@ -522,6 +534,25 @@ export default function AgendaPage() {
                   {TASK_PRIORITIES.map((value) => (
                     <option key={value} value={value}>
                       {PRIORITIES[value]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Contacto" className="sm:col-span-2">
+                <select
+                  value={form.contact_id}
+                  onChange={(event) =>
+                    setForm({ ...form, contact_id: event.target.value })
+                  }
+                  className={control}
+                >
+                  <option value="">Sin contacto asociado</option>
+                  {contacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.nombre_completo}
+                      {contact.telefono ? ` | ${contact.telefono}` : ""}
+                      {contact.correo ? ` | ${contact.correo}` : ""}
                     </option>
                   ))}
                 </select>

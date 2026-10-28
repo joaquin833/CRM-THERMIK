@@ -62,6 +62,15 @@ export interface AgendaTask {
   is_overdue?: boolean;
 }
 
+export interface AgendaContact {
+  id: string;
+  nombre: string;
+  apellido: string | null;
+  nombre_completo: string;
+  correo: string | null;
+  telefono: string | null;
+}
+
 export interface CreateTaskInput {
   title: string;
   description?: string | null;
@@ -207,6 +216,25 @@ function normalizeUpdate(input: UpdateTaskInput) {
     payload.completed_at = new Date().toISOString();
   }
   return payload;
+}
+
+export async function listAgendaContacts(): Promise<AgendaContact[]> {
+  const { data, error } = await getSupabase()
+    .from("contactos")
+    .select("id,nombre,apellido,correo,telefono")
+    .order("nombre", { ascending: true })
+    .order("apellido", { ascending: true });
+
+  if (error) throw formatError("listar los contactos", error);
+
+  return (data ?? []).map((contact) => ({
+    id: contact.id,
+    nombre: contact.nombre,
+    apellido: contact.apellido ?? null,
+    nombre_completo: [contact.nombre, contact.apellido].filter(Boolean).join(" "),
+    correo: contact.correo ?? null,
+    telefono: contact.telefono ?? null,
+  })) as AgendaContact[];
 }
 
 export async function listAgendaTasks(filters: AgendaFilters = {}): Promise<AgendaResult<AgendaTask[]>> {

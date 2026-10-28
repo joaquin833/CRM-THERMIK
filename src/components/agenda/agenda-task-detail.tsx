@@ -9,6 +9,7 @@ import {
   TASK_TYPES,
   updateAgendaTask,
   type AgendaTask,
+  type AgendaContact,
   type TaskPriority,
   type TaskStatus,
   type TaskType,
@@ -19,11 +20,11 @@ const TYPES: Record<TaskType, string> = { follow_up: "Seguimiento", call: "Llama
 const PRIORITIES: Record<TaskPriority, string> = { low: "Baja", medium: "Media", high: "Alta", urgent: "Urgente" };
 const control = "focus-ring w-full rounded-lg border border-[rgb(var(--border))] bg-white px-3 py-2.5 text-sm text-[rgb(var(--text-primary))] outline-none";
 
-type Props = { task: AgendaTask | null; onClose: () => void; onUpdated: (task: AgendaTask) => void; onDeleted: (id: string) => void };
-type State = { title: string; description: string; task_type: TaskType; status: TaskStatus; priority: TaskPriority; start_at: string; due_at: string; reminder_at: string; all_day: boolean; notes: string };
-const EMPTY: State = { title: "", description: "", task_type: "follow_up", status: "pending", priority: "medium", start_at: "", due_at: "", reminder_at: "", all_day: false, notes: "" };
+type Props = { contacts: AgendaContact[]; task: AgendaTask | null; onClose: () => void; onUpdated: (task: AgendaTask) => void; onDeleted: (id: string) => void };
+type State = { title: string; description: string; task_type: TaskType; status: TaskStatus; priority: TaskPriority; start_at: string; due_at: string; reminder_at: string; all_day: boolean; notes: string; contact_id: string };
+const EMPTY: State = { title: "", description: "", task_type: "follow_up", status: "pending", priority: "medium", start_at: "", due_at: "", reminder_at: "", all_day: false, notes: "", contact_id: "" };
 
-export default function AgendaTaskDetail({ task, onClose, onUpdated, onDeleted }: Props) {
+export default function AgendaTaskDetail({ contacts, task, onClose, onUpdated, onDeleted }: Props) {
   const [form, setForm] = useState<State>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -31,7 +32,7 @@ export default function AgendaTaskDetail({ task, onClose, onUpdated, onDeleted }
 
   useEffect(() => {
     if (!task) { setForm(EMPTY); return; }
-    setForm({ title: task.title, description: task.description ?? "", task_type: task.task_type, status: task.status, priority: task.priority, start_at: local(task.start_at), due_at: local(task.due_at), reminder_at: local(task.reminder_at), all_day: task.all_day, notes: task.notes ?? "" });
+    setForm({ title: task.title, description: task.description ?? "", task_type: task.task_type, status: task.status, priority: task.priority, start_at: local(task.start_at), due_at: local(task.due_at), reminder_at: local(task.reminder_at), all_day: task.all_day, notes: task.notes ?? "", contact_id: task.contact_id ?? "" });
     setError(""); setConfirmDelete(false);
   }, [task]);
 
@@ -45,7 +46,7 @@ export default function AgendaTaskDetail({ task, onClose, onUpdated, onDeleted }
     if (form.start_at && form.due_at && new Date(form.due_at) < new Date(form.start_at)) return setError("El vencimiento no puede ser anterior al inicio.");
     setSaving(true);
     try {
-      const updated = await updateAgendaTask(task.id, { title: form.title.trim(), description: clean(form.description), task_type: form.task_type, status: form.status, priority: form.priority, start_at: iso(form.start_at), due_at: iso(form.due_at)!, reminder_at: iso(form.reminder_at), all_day: form.all_day, notes: clean(form.notes), completed_at: form.status === "completed" ? task.completed_at ?? new Date() : null });
+      const updated = await updateAgendaTask(task.id, { title: form.title.trim(), description: clean(form.description), task_type: form.task_type, status: form.status, priority: form.priority, start_at: iso(form.start_at), due_at: iso(form.due_at)!, reminder_at: iso(form.reminder_at), all_day: form.all_day, notes: clean(form.notes), contact_id: form.contact_id || null, completed_at: form.status === "completed" ? task.completed_at ?? new Date() : null });
       onUpdated(updated); onClose();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible guardar los cambios."); }
     finally { setSaving(false); }
@@ -77,6 +78,7 @@ export default function AgendaTaskDetail({ task, onClose, onUpdated, onDeleted }
         <Field label="Estado"><select value={form.status} onChange={e => setForm({...form,status:e.target.value as TaskStatus})} className={control}>{TASK_STATUSES.map(v=><option key={v} value={v}>{STATUS[v]}</option>)}</select></Field>
         <Field label="Prioridad"><select value={form.priority} onChange={e => setForm({...form,priority:e.target.value as TaskPriority})} className={control}>{TASK_PRIORITIES.map(v=><option key={v} value={v}>{PRIORITIES[v]}</option>)}</select></Field>
         <label className="flex items-center gap-3 self-end rounded-lg border border-[rgb(var(--border))] px-3 py-2.5 text-sm font-medium text-slate-700"><input type="checkbox" checked={form.all_day} onChange={e => setForm({...form,all_day:e.target.checked})} className="h-4 w-4 accent-emerald-700"/>Actividad de todo el dÃ­a</label>
+        <Field label="Contacto" className="sm:col-span-2"><select value={form.contact_id} onChange={e => setForm({...form,contact_id:e.target.value})} className={control}><option value="">Sin contacto asociado</option>{contacts.map(contact => <option key={contact.id} value={contact.id}>{contact.nombre_completo}{contact.telefono ? ` | ${contact.telefono}` : ""}{contact.correo ? ` | ${contact.correo}` : ""}</option>)}</select></Field>
         <Field label="Inicio"><input type="datetime-local" value={form.start_at} onChange={e => setForm({...form,start_at:e.target.value})} className={control}/></Field>
         <Field label="Vencimiento"><input type="datetime-local" value={form.due_at} onChange={e => setForm({...form,due_at:e.target.value})} className={control}/></Field>
         <Field label="Recordatorio"><input type="datetime-local" value={form.reminder_at} onChange={e => setForm({...form,reminder_at:e.target.value})} className={control}/></Field>
