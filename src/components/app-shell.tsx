@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { ThermikhausAICloud } from "@/components/ai/thermikhaus-ai-cloud";
 
 import { ThermikhausLogo } from "./brand";
 
@@ -191,6 +192,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="p-4 sm:p-5 lg:p-8">{children}</div>
       </main>
+      <ThermikhausAICloud />
     </div>
   );
 }
