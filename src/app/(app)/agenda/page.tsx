@@ -11,6 +11,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import AgendaTaskDetail from "@/components/agenda/agenda-task-detail";
+import AgendaCalendar, { type CalendarView } from "@/components/agenda/agenda-calendar";
 import { syncAgendaTaskAutomatically } from "@/lib/google/calendar-client";
 import {
   completeAgendaTask,
@@ -96,6 +97,7 @@ export default function AgendaPage() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<AgendaTask | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [display, setDisplay] = useState<"list" | CalendarView>("list");
 
   const load = useCallback(async (manual = false) => {
     manual ? setRefreshing(true) : setLoading(true);
@@ -248,6 +250,13 @@ export default function AgendaPage() {
     }
   }
 
+  function openCreateAt(date: Date) {
+    const start = localInput(date);
+    const due = localInput(new Date(date.getTime() + 30 * 60_000));
+    setForm({ ...EMPTY, start_at: start, due_at: due });
+    setModal(true);
+  }
+
   return (
     <AppShell>
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -255,8 +264,8 @@ export default function AgendaPage() {
           <p className="text-sm font-medium uppercase tracking-wide text-emerald-700">
             Agenda comercial
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-950">Agenda</h1>
-          <p className="mt-1 text-slate-600">
+          <h1 className="mt-0.5 text-2xl font-bold text-slate-950">Agenda</h1>
+          <p className="mt-0.5 text-sm text-slate-600">
             Seguimientos, llamadas, reuniones y próximas acciones comerciales.
           </p>
         </div>
@@ -281,8 +290,30 @@ export default function AgendaPage() {
         </div>
       </header>
 
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex rounded-xl bg-slate-100 p-1">
+          {(["list", "month", "week", "day"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setDisplay(option)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                display === option
+                  ? "bg-white text-emerald-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {option === "list" ? "Lista" : option === "month" ? "Mes" : option === "week" ? "Semana" : "Día"}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-slate-500">
+          {display === "list" ? "Gestión detallada de actividades" : "Vista visual sincronizada con Agenda y Google Calendar"}
+        </p>
+      </div>
+
       <section
-        className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Resumen de agenda"
       >
         <Metric label="Pendientes" value={counts.pending} />
@@ -386,7 +417,8 @@ export default function AgendaPage() {
         </div>
       )}
 
-      <section className="mt-6 overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-white shadow-sm">
+      {display === "list" ? (
+      <section className="mt-3 overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-white shadow-sm">
         {loading ? (
           <p className="p-10 text-center text-sm text-slate-500">
             Cargando agenda comercial...
@@ -425,6 +457,16 @@ export default function AgendaPage() {
         )}
       </section>
 
+      ) : (
+        <div className="mt-3">
+          <AgendaCalendar
+            tasks={shown}
+            view={display}
+            onTaskOpen={setSelectedTask}
+            onCreateAt={openCreateAt}
+          />
+        </div>
+      )}
       <AgendaTaskDetail
         task={selectedTask}
         contacts={contacts}
@@ -804,6 +846,11 @@ function Field({
 
 function text(value: string) {
   return value.trim() || null;
+}
+
+function localInput(value: Date) {
+  const offset = value.getTimezoneOffset();
+  return new Date(value.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
 
 function iso(value: string) {
