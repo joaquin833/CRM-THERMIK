@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ArrowUp, ExternalLink, Loader2, MessageCircle, Plus, Sparkles, X } from "lucide-react";
+import { AIActionPreview } from "@/components/ai/ai-action-preview";
+import type { ProposedAIAction } from "@/lib/ai/action-schemas";
 
 type RecordLink = { type: string; id: string; label: string; url: string };
 type AssistantResponse = {
   answer: string;
   recordsUsed: RecordLink[];
   suggestedAction: string | null;
+  proposedAction?: ProposedAIAction | null;
 };
 type ChatMessage = {
   id: string;
@@ -17,6 +20,8 @@ type ChatMessage = {
   text: string;
   records?: RecordLink[];
   action?: string | null;
+  proposedAction?: ProposedAIAction | null;
+  actionResult?: { message: string; url: string; calendar?: { synced: boolean } } | null;
 };
 
 const suggestions = [
@@ -33,6 +38,7 @@ export function ThermikhausAICloud() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [executingId, setExecutingId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const context = useMemo(() => pageContext(pathname), [pathname]);
 
@@ -75,6 +81,7 @@ export function ThermikhausAICloud() {
           text: result.answer,
           records: result.recordsUsed,
           action: result.suggestedAction,
+          proposedAction: result.proposedAction ?? null,
         },
       ]);
     } catch (reason) {
@@ -82,6 +89,33 @@ export function ThermikhausAICloud() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function executeAction(messageId: string, action: ProposedAIAction) {
+    setExecutingId(messageId);
+    setError("");
+    try {
+      const response = await fetch("/api/ai/execute-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "No fue posible ejecutar la acción");
+      setMessages((current) => current.map((message) =>
+        message.id === messageId ? { ...message, actionResult: body } : message,
+      ));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Error al ejecutar la acción");
+    } finally {
+      setExecutingId(null);
+    }
+  }
+
+  function cancelAction(messageId: string) {
+    setMessages((current) => current.map((message) =>
+      message.id === messageId ? { ...message, proposedAction: null } : message,
+    ));
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -180,6 +214,15 @@ export function ThermikhausAICloud() {
                         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
                           <strong>Acción sugerida:</strong> {message.action}
                         </div>
+                      )}
+                      {message.proposedAction && (
+                        <AIActionPreview
+                          action={message.proposedAction}
+                          busy={executingId === message.id}
+                          result={message.actionResult}
+                          onConfirm={() => void executeAction(message.id, message.proposedAction!)}
+                          onCancel={() => cancelAction(message.id)}
+                        />
                       )}
                     </article>
                   ))}

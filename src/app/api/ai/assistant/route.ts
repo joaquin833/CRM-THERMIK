@@ -114,8 +114,49 @@ Devuelve exclusivamente JSON válido con esta estructura exacta:
       "url": "/ruta/interna"
     }
   ],
-  "suggestedAction": "Acción recomendada o null"
+  "suggestedAction": "Acción recomendada o null",
+  "proposedAction": null
 }
+Reglas para proposedAction:
+- Usa null si el usuario solo solicita información.
+- Si el usuario pide crear, agendar o programar una actividad, proposedAction DEBE usar exactamente esta forma:
+{
+  "type": "create_task",
+  "requiresConfirmation": true,
+  "label": "Crear llamada de seguimiento",
+  "payload": {
+    "title": "Revisar oportunidades prioritarias",
+    "description": "Descripción breve o null",
+    "task_type": "call",
+    "priority": "medium",
+    "start_at": "2026-10-31T10:00:00-03:00",
+    "due_at": "2026-10-31T10:30:00-03:00",
+    "reminder_at": null,
+    "all_day": false,
+    "contact_id": null,
+    "company_id": null,
+    "project_id": null,
+    "opportunity_id": null,
+    "quote_id": null,
+    "relations": {
+      "contact_name": null,
+      "company_name": null,
+      "project_name": null,
+      "opportunity_name": null,
+      "quote_number": null
+    }
+  }
+}
+- task_type solo puede ser: follow_up, call, meeting, email, visit, quote_review u other.
+- priority solo puede ser: low, medium, high o urgent.
+- Si el usuario pide reprogramar una tarea real, usa exactamente type reschedule_task con label y payload que contenga task_id, start_at, due_at, reminder_at y all_day.
+- Usa fechas ISO con zona horaria explícita America/Santiago y siempre futuras.
+- Toda acción debe incluir label, payload, relations y requiresConfirmation: true.
+- Usa IDs y nombres únicamente si aparecen en page_context, quote_search o commercial_dashboard.
+- Si existe una oportunidad contextual, conserva también su contacto, empresa, proyecto y cotización cuando estén presentes.
+- Si no puedes identificar una relación de forma inequívoca, usa null tanto en el ID como en su nombre.
+- Nunca omitas label, payload ni relations.
+- Nunca propongas eliminar, cancelar, enviar mensajes ni modificar cotizaciones.
 No uses Markdown. No agregues otros campos.
 `;
 
